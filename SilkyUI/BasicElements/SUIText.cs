@@ -1,7 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Terraria.UI.Chat;
 
-namespace SilkyUI.BasicComponents;
+namespace SilkyUI.BasicElements;
 
 public class SUIText : View
 {

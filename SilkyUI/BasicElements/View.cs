@@ -1,8 +1,10 @@
 ﻿namespace SilkyUI.BasicElements;
 
 /// <summary>
-/// 简单说明: 2024.8.26
-/// 只有 View 能用, 别的都不建议用.
+/// 简单说明: 2024.8.26 <br/>
+/// 只有 View 能用, 别的都不建议用. <br/>
+/// 使用固定宽高必须设置 <see cref="View.SpecifyWidth"/> <see cref="View.SpecifyHeight"/> 为 true <br/>
+/// 所有 UI 元素都必须基于 <see cref="View"/> <br/>
 /// </summary>
 public partial class View : UIElement
 {
