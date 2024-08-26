@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="..\tModLoader.targets" />
+
+	<PropertyGroup>
+		<AssemblyName>SilkyUI</AssemblyName>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Authors>Zero</Authors>
+		<PackageVersion>1.0.0</PackageVersion>
+		<AssemblyVersion>1.0.0</AssemblyVersion>
+		<FileVersion>1.0.0</FileVersion>
+		<NeutralLanguage>zh-Hans</NeutralLanguage>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Solaestas.tModLoader.ModBuilder" Version="1.6.1" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,3 @@
+displayName = SilkyUIExample
+author = Zero
+version = 0.1
