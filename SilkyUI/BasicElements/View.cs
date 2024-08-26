@@ -1,5 +1,9 @@
 ﻿namespace SilkyUI.BasicElements;
 
+/// <summary>
+/// 简单说明: 2024.8.26
+/// 只有 View 能用, 别的都不建议用.
+/// </summary>
 public partial class View : UIElement
 {
     public View()
