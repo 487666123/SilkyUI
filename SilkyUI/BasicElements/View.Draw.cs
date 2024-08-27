@@ -4,17 +4,21 @@ public partial class View
 {
     public event Action<View> OnUpdateTransformMatrix;
 
+    /// <summary>
+    /// 绘制自己
+    /// </summary>
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
         DrawSDFRectangle();
         base.DrawSelf(spriteBatch);
     }
 
+    /// <summary>
+    /// 更新变换矩阵
+    /// </summary>
     protected virtual void UpdateTransformMatrix()
     {
-        var parent = this.RecentParentView();
-
-        if (parent != null)
+        if (this.RecentParentView() is View parent)
             TransformMatrix = parent.TransformMatrix;
         else
             TransformMatrix = Main.UIScaleMatrix;
@@ -22,6 +26,9 @@ public partial class View
         OnUpdateTransformMatrix?.Invoke(this);
     }
 
+    /// <summary>
+    /// 绘制
+    /// </summary>
     public override void Draw(SpriteBatch spriteBatch)
     {
         UpdateTransformMatrix();
@@ -44,6 +51,9 @@ public partial class View
             null, null, null, null, null, TransformMatrix);
     }
 
+    /// <summary>
+    /// 原版绘制
+    /// </summary>
     protected virtual void OriginalDraw(SpriteBatch spriteBatch)
     {
         var overflowHidden = OverflowHidden;
@@ -96,6 +106,10 @@ public partial class View
             Color.Transparent, Border, BorderColor, TransformMatrix);
     }
 
+    /// <summary>
+    /// 绘制子元素
+    /// </summary>
+    /// <param name="spriteBatch"></param>
     public override void DrawChildren(SpriteBatch spriteBatch)
     {
         // 不绘制完全溢出的子元素
@@ -140,7 +154,10 @@ public partial class View
         HoverTimer.Update();
     }
 
-    private void DrawSDFRectangle()
+    /// <summary>
+    /// 绘制 SDF 圆角矩形
+    /// </summary>
+    protected void DrawSDFRectangle()
     {
         var position = GetDimensions().Position();
         var size = GetDimensions().Size();

@@ -205,7 +205,7 @@ public class ExampleUI : BasicBody
         if (view == null)
             return;
 
-        var center = view.GetOuterDimensions().Center();
+        var center = view.GetDimensions().Center();
 
         var beforeTransformCenter = Vector2.Transform(center, view.TransformMatrix);
 

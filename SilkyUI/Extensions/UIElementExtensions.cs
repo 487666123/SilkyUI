@@ -25,10 +25,10 @@ public static class UIElementExtensions
         return null;
     }
 
-    public static UIElement PreviousElement(this UIElement uie)
+    public static UIElement PreviousElement(this UIElement uie, Func<UIElement, bool> predicate)
     {
         var parent = uie.Parent;
-        if (parent == null || uie == null || parent.Elements.Count <= 1 || parent.Elements[0] == uie)
+        if (predicate == null || parent == null || uie == null || parent.Elements.Count <= 1 || parent.Elements[0] == uie)
             return null;
 
         var index = parent.Elements.IndexOf(uie);
@@ -37,7 +37,7 @@ public static class UIElementExtensions
         {
             index--;
             var previous = parent.Elements[index];
-            if (previous is View view && view.Positioning is Positioning.Relative)
+            if (predicate(previous))
             {
                 return parent.Elements[(parent.Elements.IndexOf(uie) - 1)];
             }
@@ -45,6 +45,10 @@ public static class UIElementExtensions
 
         return null;
     }
+
+    public static UIElement PreviousRelativeElement(this UIElement uie) =>
+        uie.PreviousElement(
+            previous => previous is View view && view.Positioning is Positioning.Relative);
 
     public static UIElement SetPositionPixels(this UIElement uie, float x, float y)
     {

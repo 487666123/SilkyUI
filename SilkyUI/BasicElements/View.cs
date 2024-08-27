@@ -14,6 +14,17 @@ public partial class View : UIElement
     }
 
     #region Methods
+    /// <summary>
+    /// 获取父元素 <see cref="CalculatedStyle"/><br/>
+    /// 绝对定位下与原版相同<br/>
+    /// 相对定位下, 父元素不是 <see cref="View"/> 子类与原版相同<br/>
+    /// 父元素是 <see cref="View"/> 且父元素 <see cref="SpecifyWidth"/> <see cref="SpecifyHeight"/>
+    /// 为 false, 则不使用父元素大小转而设为 0<br/>
+    /// 且会根据父元素 <see cref="FlowDirection"/> 决定 <see cref="CalculatedStyle"/> 的 XY,
+    /// 排列自身位置<br/>
+    /// 位置与 <see cref="UIElementExtensions.PreviousRelativeElement(UIElement)"/> 相关
+    /// </summary>
+    /// <returns></returns>
     public CalculatedStyle GetParentDimensions()
     {
         if (Parent is null)
@@ -25,7 +36,7 @@ public partial class View : UIElement
         // 绝对定位, 一定需要父元素大小 (因为不会撑起父元素)
         if (Parent is View parent && Positioning is Positioning.Relative)
         {
-            var previousElement = this.PreviousElement();
+            var previousElement = this.PreviousRelativeElement();
             if (previousElement != null)
             {
                 var previousOuterDimensions = previousElement.GetOuterDimensions();
@@ -47,129 +58,13 @@ public partial class View : UIElement
 
     public override void Recalculate()
     {
-        _outerDimensions = CalculateDimensionsByParentDimensions(GetParentDimensions());
+        var parentDimensions = GetParentDimensions();
+
+        _outerDimensions = CalculateDimensionsByParentDimensions(parentDimensions);
         _dimensions = CalculateDimensions(_outerDimensions);
         _innerDimensions = CalculateInnerDimensions(_dimensions);
 
         RecalculateChildren();
-    }
-
-    #region CalculateDimensions
-    public CalculatedStyle CalculateDimensions(CalculatedStyle outerDimensions)
-    {
-        CalculatedStyle dimensions = outerDimensions;
-        dimensions.X += MarginLeft;
-        dimensions.Y += MarginTop;
-        dimensions.Width -= MarginLeft + MarginRight;
-        dimensions.Height -= MarginTop + MarginBottom;
-        return dimensions;
-    }
-
-    public CalculatedStyle CalculateInnerDimensions(CalculatedStyle dimensions)
-    {
-        CalculatedStyle innerDimensions = dimensions;
-        innerDimensions.X += PaddingLeft + Border;
-        innerDimensions.Y += PaddingTop + Border;
-        innerDimensions.Width -= this.HPadding() + Border;
-        innerDimensions.Height -= this.VPadding() + Border;
-        return innerDimensions;
-    }
-    #endregion
-
-    /// <summary>
-    /// 重新计算子元素
-    /// </summary>
-    public override void RecalculateChildren()
-    {
-        // 绝对定位, 即脱离标准文档留流
-        List<UIElement> absoluteChildren = [];
-
-        var leftTop = _innerDimensions.Position();
-        var rightBottom = leftTop;
-
-        // 标准文档
-        foreach (UIElement element in Elements)
-        {
-            if (element is View view && view.Positioning is Positioning.Relative)
-            {
-                element.Recalculate();
-
-                var right = element.GetOuterDimensions().Right();
-                var bottom = element.GetOuterDimensions().Bottom();
-
-                if (right > rightBottom.X)
-                    rightBottom.X = right;
-
-                if (bottom > rightBottom.Y)
-                    rightBottom.Y = bottom;
-
-                continue;
-            }
-
-            absoluteChildren.Add(element);
-        }
-
-        var contentSize = rightBottom - leftTop;
-        if (contentSize.X > 0 || contentSize.Y > 0)
-        {
-            SecondaryRecalculate(contentSize);
-        }
-
-        // 绝对定位
-        foreach (UIElement element in absoluteChildren)
-        {
-            element.Recalculate();
-        }
-    }
-
-    /// <summary>
-    /// 计算位置与偏移
-    /// </summary>
-    public virtual void SecondaryRecalculate(Vector2 contentSize)
-    {
-        if (Parent is not View view)
-            return;
-
-        var offset = new Vector2();
-
-        if (contentSize.X > 0 && !SpecifyWidth)
-        {
-            _outerDimensions.Width =
-                 contentSize.X + this.HMargin() + this.HPadding() + Border * 2;
-
-            if (Positioning is Positioning.Absolute ||
-                (Positioning is Positioning.Relative && view.SpecifyWidth))
-            {
-                offset.X = -_outerDimensions.Width * HAlign;
-            }
-        }
-
-        if (contentSize.Y > 0 && !SpecifyHeight)
-        {
-            _outerDimensions.Height =
-                 contentSize.Y + this.VMargin() + this.VPadding() + Border * 2;
-
-            if (Positioning is Positioning.Absolute ||
-                (Positioning is Positioning.Relative && view.SpecifyHeight))
-            {
-                offset.Y = -_outerDimensions.Height * VAlign;
-            }
-        }
-
-        if (offset.X != 0)
-        {
-            if (offset.Y != 0)
-                this.Offset(offset);
-            else
-                this.OffsetX(offset.X);
-        }
-        else if (offset.Y != 0)
-        {
-            this.OffsetY(offset.Y);
-        }
-
-        _dimensions = CalculateDimensions(_outerDimensions);
-        _innerDimensions = CalculateInnerDimensions(_dimensions);
     }
 
     /// <summary>
@@ -214,6 +109,114 @@ public partial class View : UIElement
         }
 
         return result;
+    }
+
+    #region CalculateDimensions
+    public CalculatedStyle CalculateDimensions(CalculatedStyle outerDimensions)
+    {
+        CalculatedStyle dimensions = outerDimensions;
+        dimensions.X += MarginLeft;
+        dimensions.Y += MarginTop;
+        dimensions.Width -= MarginLeft + MarginRight;
+        dimensions.Height -= MarginTop + MarginBottom;
+        return dimensions;
+    }
+
+    public CalculatedStyle CalculateInnerDimensions(CalculatedStyle dimensions)
+    {
+        CalculatedStyle innerDimensions = dimensions;
+        innerDimensions.X += PaddingLeft + Border;
+        innerDimensions.Y += PaddingTop + Border;
+        innerDimensions.Width -= this.HPadding() + Border;
+        innerDimensions.Height -= this.VPadding() + Border;
+        return innerDimensions;
+    }
+    #endregion
+
+    /// <summary>
+    /// 重新计算子元素
+    /// </summary>
+    public override void RecalculateChildren()
+    {
+        // 绝对定位
+        List<UIElement> absoluteElements = [];
+
+        var innerPosition = _innerDimensions.Position();
+        var rightBottom = innerPosition;
+
+        // 标准文档流
+        foreach (UIElement element in Elements)
+        {
+            if (element is not View child ||
+                child.Positioning is not Positioning.Relative)
+            {
+                absoluteElements.Add(element); continue;
+            }
+
+            element.Recalculate();
+
+            rightBottom.X =
+                Math.Max(rightBottom.X, element.GetOuterDimensions().Right());
+            rightBottom.Y =
+                Math.Max(rightBottom.Y, element.GetOuterDimensions().Bottom());
+        }
+
+        // 二次计算大小
+        var contentSize = rightBottom - innerPosition;
+        if ((contentSize.X > 0 || contentSize.Y > 0) && Parent is View parent)
+        {
+            SecondaryRecalculate(parent, contentSize);
+        }
+
+        // 绝对定位
+        absoluteElements.ForEach(e => e.Recalculate());
+    }
+
+    /// <summary>
+    /// 计算位置与偏移
+    /// </summary>
+    public virtual void SecondaryRecalculate(View parent, Vector2 contentSize)
+    {
+        var offset = new Vector2();
+
+        if (contentSize.X > 0 && !SpecifyWidth)
+        {
+            _outerDimensions.Width =
+                 contentSize.X + this.HMargin() + this.HPadding() + Border * 2;
+
+            if (Positioning is Positioning.Absolute ||
+                (Positioning is Positioning.Relative && parent.SpecifyWidth))
+            {
+                offset.X = -_outerDimensions.Width * HAlign;
+            }
+        }
+
+        if (contentSize.Y > 0 && !SpecifyHeight)
+        {
+            _outerDimensions.Height =
+                 contentSize.Y + this.VMargin() + this.VPadding() + Border * 2;
+
+            if (Positioning is Positioning.Absolute ||
+                (Positioning is Positioning.Relative && parent.SpecifyHeight))
+            {
+                offset.Y = -_outerDimensions.Height * VAlign;
+            }
+        }
+
+        if (offset.X != 0)
+        {
+            if (offset.Y != 0)
+                this.Offset(offset);
+            else
+                this.OffsetX(offset.X);
+        }
+        else if (offset.Y != 0)
+        {
+            this.OffsetY(offset.Y);
+        }
+
+        _dimensions = CalculateDimensions(_outerDimensions);
+        _innerDimensions = CalculateInnerDimensions(_dimensions);
     }
 
     public override void LeftMouseDown(UIMouseEvent evt)
