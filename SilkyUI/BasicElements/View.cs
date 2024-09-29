@@ -3,7 +3,7 @@
 /// <summary>
 /// 简单说明: 2024.8.26 <br/>
 /// 只有 View 能用, 别的都不建议用. <br/>
-/// 使用固定宽高必须设置 <see cref="View.SpecifyWidth"/> <see cref="View.SpecifyHeight"/> 为 true <br/>
+/// 使用固定宽高必须设置 <see cref="SpecifyWidth"/> <see cref="SpecifyHeight"/> 为 true <br/>
 /// 所有 UI 元素都必须基于 <see cref="View"/> <br/>
 /// </summary>
 public partial class View : UIElement
@@ -27,33 +27,44 @@ public partial class View : UIElement
     /// <returns></returns>
     public CalculatedStyle GetParentDimensions()
     {
-        if (Parent is null)
+        if (Parent is not UIElement uie)
             return UserInterface.ActiveInstance.GetDimensions();
 
-        CalculatedStyle parentDimensions = Parent.GetInnerDimensions();
+        if (uie is not View parent)
+            return uie.GetInnerDimensions();
+
+        CalculatedStyle container = parent.GetInnerDimensions();
 
         // 相对定位, 若父元素明确 [没有指定] 大小, 视为父元素没有大小 (因为需要其称其父元素)
         // 绝对定位, 一定需要父元素大小 (因为不会撑起父元素)
-        if (Parent is View parent && Positioning is Positioning.Relative)
+        if (Positioning is Positioning.Relative)
         {
-            var previousElement = this.PreviousRelativeElement();
-            if (previousElement != null)
+            if (parent.Display is Display.InlineFlex)
             {
-                var previousOuterDimensions = previousElement.GetOuterDimensions();
-                if (parent.FlowDirection is FlowDirection.Column)
-                    parentDimensions.Y = previousOuterDimensions.Bottom();
-                else
-                    parentDimensions.X = previousOuterDimensions.Right();
+                var previousElement = this.PreviousRelativeElement();
+                if (previousElement != null)
+                {
+                    if (parent.FlowDirection is FlowDirection.Column)
+                        container.Y =
+                            previousElement.GetOuterDimensions().Bottom() + parent.Gap.Y;
+                    else
+                        container.X =
+                            previousElement.GetOuterDimensions().Right() + parent.Gap.X;
+                }
+            }
+            else if (parent.Display is Display.InlineGrid)
+            {
+
             }
 
             if (!parent.SpecifyWidth)
-                parentDimensions.Width = 0;
+                container.Width = 0;
 
             if (!parent.SpecifyHeight)
-                parentDimensions.Height = 0;
+                container.Height = 0;
         }
 
-        return parentDimensions;
+        return container;
     }
 
     public override void Recalculate()
@@ -73,15 +84,17 @@ public partial class View : UIElement
     /// </summary>
     public virtual CalculatedStyle CalculateDimensionsByParentDimensions(CalculatedStyle parentDimensions)
     {
-        var minWidth = MinWidth.GetValue(parentDimensions.Width);
-        var maxWidth = MaxWidth.GetValue(parentDimensions.Width);
-        var minHeight = MinHeight.GetValue(parentDimensions.Height);
-        var maxHeight = MaxHeight.GetValue(parentDimensions.Height);
-
         var rX = Left.GetValue(parentDimensions.Width) + parentDimensions.X;
         var rY = Top.GetValue(parentDimensions.Height) + parentDimensions.Y;
-        var rWidth = SpecifyWidth ? MathHelper.Clamp(Width.GetValue(parentDimensions.Width), minWidth, maxWidth) : 0;
-        var rHeight = SpecifyHeight ? MathHelper.Clamp(Height.GetValue(parentDimensions.Height), minHeight, maxHeight) : 0;
+
+        var rWidth = SpecifyWidth ?
+            MathHelper.Clamp(Width.GetValue(parentDimensions.Width),
+            MinWidth.GetValue(parentDimensions.Width),
+            MaxWidth.GetValue(parentDimensions.Width)) : 0;
+        var rHeight = SpecifyHeight ?
+            MathHelper.Clamp(Height.GetValue(parentDimensions.Height),
+            MinHeight.GetValue(parentDimensions.Height),
+            MaxHeight.GetValue(parentDimensions.Height)) : 0;
 
         var result = BoxSizing switch
         {
@@ -95,12 +108,12 @@ public partial class View : UIElement
                                 rHeight + this.VPadding() + this.VMargin() + Border * 2f),
         };
 
-        if (Positioning is Positioning.Absolute)
+        if (IsAbsolutePositioning)
         {
             result.X += (parentDimensions.Width - result.Width) * HAlign;
             result.Y += (parentDimensions.Height - result.Height) * VAlign;
         }
-        else if (Positioning is Positioning.Relative && Parent is View view)
+        else if (IsRelativePositioning && Parent is View view)
         {
             if (view.SpecifyWidth)
                 result.X += (parentDimensions.Width - result.Width) * HAlign;
@@ -133,49 +146,67 @@ public partial class View : UIElement
     }
     #endregion
 
+    protected List<UIElement> _relativeElements = [];
+    protected List<UIElement> _absoluteElements = [];
+
+    /// <summary>
+    /// 对元素进行分类
+    /// </summary>
+    public void ClassifyElements()
+    {
+        _relativeElements.Clear();
+        _absoluteElements.Clear();
+
+        Elements.ForEach(e =>
+        {
+            _relativeIndex = -1;
+
+            if (e is View child && child.Positioning is Positioning.Relative)
+                _relativeElements.Add(e);
+            else
+                _absoluteElements.Add(e);
+        });
+    }
+
+    protected int _relativeIndex;
     /// <summary>
     /// 重新计算子元素
     /// </summary>
     public override void RecalculateChildren()
     {
-        // 绝对定位
-        List<UIElement> absoluteElements = [];
+        ClassifyElements();
 
         var innerPosition = _innerDimensions.Position();
         var rightBottom = innerPosition;
 
-        // 标准文档流
-        foreach (UIElement element in Elements)
+        for (int i = 0; i < _relativeElements.Count; i++)
         {
-            if (element is not View child ||
-                child.Positioning is not Positioning.Relative)
-            {
-                absoluteElements.Add(element); continue;
-            }
+            UIElement e = _relativeElements[i];
 
-            element.Recalculate();
+            if (e is View view) view._relativeIndex = i;
+
+            e.Recalculate();
 
             rightBottom.X =
-                Math.Max(rightBottom.X, element.GetOuterDimensions().Right());
+                Math.Max(rightBottom.X, e.GetOuterDimensions().Right());
             rightBottom.Y =
-                Math.Max(rightBottom.Y, element.GetOuterDimensions().Bottom());
+                Math.Max(rightBottom.Y, e.GetOuterDimensions().Bottom());
         }
 
-        // 二次计算大小
         var contentSize = rightBottom - innerPosition;
         if ((contentSize.X > 0 || contentSize.Y > 0) && Parent is View parent)
         {
-            SecondaryRecalculate(parent, contentSize);
+            SecondRecalculate(parent, contentSize);
         }
 
         // 绝对定位
-        absoluteElements.ForEach(e => e.Recalculate());
+        _absoluteElements.ForEach(e => e.Recalculate());
     }
 
     /// <summary>
     /// 计算位置与偏移
     /// </summary>
-    public virtual void SecondaryRecalculate(View parent, Vector2 contentSize)
+    public virtual void SecondRecalculate(View parent, Vector2 contentSize)
     {
         var offset = new Vector2();
 

@@ -4,7 +4,7 @@ namespace SilkyUI.BasicElements;
 
 public enum BoxSizing { BorderBox, ContentBox }
 
-public enum Display { InlineBlock, InlineFlex, InlineGrid }
+public enum Display { InlineFlex, InlineGrid }
 
 public enum Positioning { Relative, Absolute }
 
@@ -12,7 +12,25 @@ public enum FlowDirection { Row, Column }
 
 public partial class View : UIElement
 {
+    /// <summary>
+    /// 横向格子
+    /// </summary>
+    public List<float> GridTemplateRows { get; } = [];
+    public List<float> GridTemplateColumns { get; } = [];
+
+    /// <summary>
+    /// 是相对定位
+    /// </summary>
+    public bool IsRelativePositioning => Positioning is Positioning.Relative;
+
+    /// <summary>
+    /// 是绝对定位
+    /// </summary>
+    public bool IsAbsolutePositioning => Positioning is Positioning.Absolute;
+
     public FlowDirection FlowDirection { get; set; } = FlowDirection.Row;
+
+    public Display Display { get; set; } = Display.InlineFlex;
 
     public AnimationTimer HoverTimer { get; } = new();
 

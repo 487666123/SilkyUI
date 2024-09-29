@@ -12,7 +12,7 @@ public class SilkyUserInterfaceSystem
     {
     }
 
-    public UserInterfaceStyleManager UserInterfaceStyleManager = new();
+    public UserInterfaceStyleManager UserInterfaceStyleManager { get; } = new();
 
     public readonly SilkyUserInterfaceConfiguration UserInterfaceConfiguration = new();
 

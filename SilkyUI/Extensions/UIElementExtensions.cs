@@ -27,16 +27,16 @@ public static class UIElementExtensions
 
     public static UIElement PreviousElement(this UIElement uie, Func<UIElement, bool> predicate)
     {
-        var parent = uie.Parent;
-        if (predicate == null || parent == null || uie == null || parent.Elements.Count <= 1 || parent.Elements[0] == uie)
+        if (uie?.Parent is not UIElement parent ||
+            predicate == null || parent.Elements.Count <= 1 || parent.Elements[0] == uie)
             return null;
 
         var index = parent.Elements.IndexOf(uie);
 
         while (index >= 1)
         {
-            index--;
-            var previous = parent.Elements[index];
+            var previous = parent.Elements[--index];
+
             if (predicate(previous))
             {
                 return parent.Elements[(parent.Elements.IndexOf(uie) - 1)];

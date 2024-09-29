@@ -14,4 +14,6 @@ public partial class View : UIElement
     public Color BorderColor = Color.Transparent;
 
     public Matrix TransformMatrix = Matrix.Identity;
+
+    public Vector2 Gap = Vector2.Zero;
 }

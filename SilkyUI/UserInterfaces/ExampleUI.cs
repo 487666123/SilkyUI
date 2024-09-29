@@ -1,6 +1,27 @@
-﻿using SilkyUI.BasicComponents;
+﻿using OneOf;
+using SilkyUI.BasicComponents;
 
 namespace SilkyUI.UserInterfaces;
+
+public readonly struct LazyOrValue<T>
+{
+    private readonly OneOf<T, Func<T>> _oneOf;
+    public readonly T Value => this;
+
+    private LazyOrValue(T value) => _oneOf = value;
+    private LazyOrValue(Func<T> func) => _oneOf = func;
+
+    public static implicit operator LazyOrValue<T>(T myOneOf) => new(myOneOf);
+
+    public static implicit operator LazyOrValue<T>(Func<T> myOneOf) => new(myOneOf);
+
+    public static implicit operator T(LazyOrValue<T> myOneOf)
+    {
+        return myOneOf._oneOf.Match(
+            value => value,
+            func => func());
+    }
+}
 
 [AutoloadUserInterface("Vanilla: Radial Hotbars", "SilkyUI: ExampleUI")]
 public class ExampleUI : BasicBody
@@ -20,15 +41,15 @@ public class ExampleUI : BasicBody
         var borderColor = style.GetColor("BorderColor");
         var smallRounded = style.GetFloat("SmallRounded");
 
-        MainPanel = new SUIDraggableView(
-            backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
+        MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
         {
             Shaded = true,
             ShadowThickness = 50f,
             ShadowColor = borderColor * 0.2f,
             FlowDirection = FlowDirection.Row,
+            Gap = new Vector2(8f)
         };
-        MainPanel.SetPadding(10f);
+        MainPanel.SetPadding(8f);
         MainPanel.Join(this);
 
         var view1 = new View
@@ -71,7 +92,9 @@ public class ExampleUI : BasicBody
             Width = { Pixels = 250 },
             Height = { Pixels = 250 },
             BgColor = Color.White * 0.5f,
+            Gap = new Vector2(8),
         };
+        view4.HAlign = 1f;
         view4.SetPadding(10);
         view4.OnUpdateTransformMatrix += (view) =>
         {
@@ -141,7 +164,7 @@ public class ExampleUI : BasicBody
         Views.Add(view9);
         view9.Join(MainPanel);
 
-        var view10 = new View
+        var absoluteCenter = new View
         {
             SpecifyWidth = false,
             SpecifyHeight = false,
@@ -151,14 +174,16 @@ public class ExampleUI : BasicBody
             Positioning = Positioning.Absolute,
             HAlign = 0.5f,
             VAlign = 0.5f,
+            Gap = new Vector2(8),
+            Display = Display.InlineGrid,
         };
-        view10.SetPadding(10);
-        view10.OnUpdateTransformMatrix += (view) =>
+        absoluteCenter.SetPadding(10);
+        absoluteCenter.OnUpdateTransformMatrix += (view) =>
         {
             SetMatrixScaleAnimation(view, 0.1f);
         };
-        Views.Add(view10);
-        view10.Join(MainPanel);
+        Views.Add(absoluteCenter);
+        absoluteCenter.Join(MainPanel);
 
         var view11 = new View
         {
@@ -173,7 +198,7 @@ public class ExampleUI : BasicBody
         };
         view11.SetPadding(10);
         Views.Add(view11);
-        view11.Join(view10);
+        view11.Join(absoluteCenter);
 
         var view12 = new View
         {
@@ -187,7 +212,7 @@ public class ExampleUI : BasicBody
             VAlign = 0.5f
         };
         Views.Add(view12);
-        view12.Join(view10);
+        view12.Join(absoluteCenter);
     }
 
     public override void Update(GameTime gameTime)

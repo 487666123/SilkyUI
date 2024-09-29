@@ -6,8 +6,10 @@ public class SilkyPlayer : ModPlayer
     {
         SilkyUserInterfaceManager uiManager = SilkyUserInterfaceManager.Instance;
 
+        // Dictionary => List<SilkyUserInterface>
         foreach (var userInterfaces in uiManager.SilkyUserInterfaces)
         {
+            // List => Sign
             foreach (var userInterface in userInterfaces.Value)
             {
                 if (uiManager.BasicBodyTypes.TryGetValue(userInterface, out var type))

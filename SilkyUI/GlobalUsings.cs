@@ -1,4 +1,4 @@
-﻿// 全局引用
+﻿// Global Usings
 
 global using Microsoft.Xna.Framework;
 global using Microsoft.Xna.Framework.Graphics;
