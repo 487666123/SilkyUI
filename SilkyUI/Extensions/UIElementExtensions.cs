@@ -4,31 +4,24 @@ public static class UIElementExtensions
 {
     public static View RecentParentView(this UIElement uie)
     {
-        if (uie == null)
-            return null;
+        var parent = uie?.Parent;
 
-        var parent = uie.Parent;
-
-        if (parent is null)
-            return null;
-
-        do
+        while (parent is not null)
         {
             if (parent is View view)
-            {
                 return view;
-            }
 
             parent = parent.Parent;
-        } while (parent is not null);
+        }
 
         return null;
     }
 
     public static UIElement PreviousElement(this UIElement uie, Func<UIElement, bool> predicate)
     {
-        if (uie?.Parent is not UIElement parent ||
-            predicate == null || parent.Elements.Count <= 1 || parent.Elements[0] == uie)
+        if (predicate == null ||
+            uie?.Parent is not { Elements.Count: > 1 } parent ||
+            parent.Elements[0] == uie)
             return null;
 
         var index = parent.Elements.IndexOf(uie);
@@ -47,45 +40,47 @@ public static class UIElementExtensions
     }
 
     public static UIElement PreviousRelativeElement(this UIElement uie) =>
-        uie.PreviousElement(
-            previous => previous is View view && view.Positioning is Positioning.Relative);
+        uie.PreviousElement(previous => previous is View { Position: Position.Relative });
 
-    public static UIElement SetPositionPixels(this UIElement uie, float x, float y)
+    public static T SetPositionPixels<T>(this T uie, float x, float y) where T : UIElement
     {
-        uie.Left.Pixels = x; uie.Top.Pixels = y;
+        uie.Left.Pixels = x;
+        uie.Top.Pixels = y;
         return uie;
     }
 
-    #region Offset
-    public static void OffsetX(this UIElement uie, float offset)
+    #region Offset Position
+
+    public static T SetDimensions<T>(this T uie, Vector2 position) where T : UIElement
+    {
+        uie.Offset(position - uie._outerDimensions.Position());
+
+        return uie;
+    }
+
+    public static T OffsetX<T>(this T uie, float offset) where T : UIElement
     {
         uie._outerDimensions.X += offset;
-
         uie._dimensions.X += offset;
-
         uie._innerDimensions.X += offset;
 
-        foreach (var child in uie.Elements)
-        {
-            child.OffsetX(offset);
-        }
+        uie.Elements.ForEach(element => element.OffsetX(offset));
+
+        return uie;
     }
 
-    public static void OffsetY(this UIElement uie, float offset)
+    public static T OffsetY<T>(this T uie, float offset) where T : UIElement
     {
         uie._outerDimensions.Y += offset;
-
         uie._dimensions.Y += offset;
-
         uie._innerDimensions.Y += offset;
 
-        foreach (var child in uie.Elements)
-        {
-            child.OffsetY(offset);
-        }
+        uie.Elements.ForEach(element => element.OffsetY(offset));
+
+        return uie;
     }
 
-    public static void Offset(this UIElement uie, Vector2 offset)
+    public static T Offset<T>(this T uie, Vector2 offset) where T : UIElement
     {
         uie._outerDimensions.X += offset.X;
         uie._outerDimensions.Y += offset.Y;
@@ -96,17 +91,21 @@ public static class UIElementExtensions
         uie._innerDimensions.X += offset.X;
         uie._innerDimensions.Y += offset.Y;
 
-        foreach (var child in uie.Elements)
-        {
-            child.Offset(offset);
-        }
+        uie.Elements.ForEach(element => element.Offset(offset));
+
+        return uie;
     }
+
     #endregion
 
-    public static void Join
-        (this UIElement uie, UIElement parent) => parent.Append(uie);
+    public static T Join<T>(this T uie, UIElement parent) where T : UIElement
+    {
+        parent.Append(uie);
+        return uie;
+    }
 
-    #region Margin Padding
+    #region [Margin] [Padding]
+
     public static float HMargin(this UIElement uie) => uie.MarginLeft + uie.MarginRight;
 
     public static float VMargin(this UIElement uie) => uie.MarginTop + uie.MarginBottom;
@@ -114,5 +113,6 @@ public static class UIElementExtensions
     public static float HPadding(this UIElement uie) => uie.PaddingLeft + uie.PaddingRight;
 
     public static float VPadding(this UIElement uie) => uie.PaddingTop + uie.PaddingBottom;
+
     #endregion
 }

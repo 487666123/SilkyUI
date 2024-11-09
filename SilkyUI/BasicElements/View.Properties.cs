@@ -2,76 +2,114 @@ using SilkyUI.Animation;
 
 namespace SilkyUI.BasicElements;
 
-public enum BoxSizing { BorderBox, ContentBox }
+public enum BoxSizing
+{
+    BorderBox,
+    ContentBox
+}
 
-public enum Display { InlineFlex, InlineGrid }
+public enum Display
+{
+    InlineBlock,
+    InlineFlex,
+    InlineGrid
+}
 
-public enum Positioning { Relative, Absolute }
-
-public enum FlowDirection { Row, Column }
+public enum Position
+{
+    Relative,
+    Absolute
+}
 
 public partial class View : UIElement
 {
-    /// <summary>
-    /// ºáÏò¸ñ×Ó
-    /// </summary>
-    public List<float> GridTemplateRows { get; } = [];
-    public List<float> GridTemplateColumns { get; } = [];
+    public Vector4 Rounded
+    {
+        get => RoundedRectangle.Rounded;
+        set => RoundedRectangle.Rounded = value;
+    }
+
+    public float Border
+    {
+        get => RoundedRectangle.Border;
+        set => RoundedRectangle.Border = value;
+    }
+
+    public Color BgColor
+    {
+        get => RoundedRectangle.BgColor;
+        set => RoundedRectangle.BgColor = value;
+    }
+
+    public Color BorderColor
+    {
+        get => RoundedRectangle.BorderColor;
+        set => RoundedRectangle.BorderColor = value;
+    }
 
     /// <summary>
-    /// ÊÇÏà¶Ô¶¨Î»
+    /// æ˜¯ç›¸å¯¹å®šä½
     /// </summary>
-    public bool IsRelativePositioning => Positioning is Positioning.Relative;
+    public bool IsRelativePosition => Position is Position.Relative;
 
     /// <summary>
-    /// ÊÇ¾ø¶Ô¶¨Î»
+    /// æ˜¯ç»å¯¹å®šä½
     /// </summary>
-    public bool IsAbsolutePositioning => Positioning is Positioning.Absolute;
-
-    public FlowDirection FlowDirection { get; set; } = FlowDirection.Row;
+    public bool IsAbsolutePosition => Position is Position.Absolute;
 
     public Display Display { get; set; } = Display.InlineFlex;
 
     public AnimationTimer HoverTimer { get; } = new();
 
     /// <summary>
-    /// ÆäËûÒ»ÇĞ»æÖÆ¶¼½áÊøÖ®ºóÔÙ»æÖÆ±ß¿ò
+    /// å…¶ä»–ä¸€åˆ‡ç»˜åˆ¶éƒ½ç»“æŸä¹‹åå†ç»˜åˆ¶è¾¹æ¡†
     /// </summary>
     public bool FinallyDrawBorder { get; set; } = false;
 
     /// <summary>
-    /// Òş²ØÍêÈ«Òç³öÔªËØ
+    /// éšè—å®Œå…¨æº¢å‡ºå…ƒç´ 
     /// </summary>
     public bool HideFullyOverflowedElements { get; set; }
 
     /// <summary>
-    /// ¾ö¶¨ºĞ×ÓÄ£ĞÍ¼ÆËã·½Ê½
+    /// å†³å®šç›’å­æ¨¡å‹è®¡ç®—æ–¹å¼
     /// </summary>
     public BoxSizing BoxSizing { get; set; } = BoxSizing.BorderBox;
 
     /// <summary>
-    /// ÔªËØ¶¨Î»<br/>
-    /// ËùÓĞ·Ç <see cref="View"/> ¼°Æä×ÓÔªËØµÄ <see cref="UIElement"/> ¶¼Îª <see cref="Positioning.Absolute"/><br/>
-    /// ËùÒÔ²¢²»½¨ÒéÊ¹ÓÃÔ­°æµÄÈÎºÎÔªËØ<br/>
-    /// Èç¹ûÏÖÓĞÔªËØ²»ÄÜÂú×ãÄãµÄĞèÇó£¬¿ÉÒÔÏò´ËÏîÄ¿ issue »òÌá½»ÄãµÄ Pr
+    /// å…ƒç´ å®šä½<br/>
+    /// æ‰€æœ‰é <see cref="View"/> åŠå…¶å­å…ƒç´ çš„ <see cref="UIElement"/> éƒ½ä¸º <see cref="Position.Absolute"/><br/>
+    /// æ‰€ä»¥å¹¶ä¸å»ºè®®ä½¿ç”¨åŸç‰ˆçš„ä»»ä½•å…ƒç´ <br/>
+    /// å¦‚æœç°æœ‰å…ƒç´ ä¸èƒ½æ»¡è¶³ä½ çš„éœ€æ±‚ï¼Œå¯ä»¥å‘æ­¤é¡¹ç›® issue æˆ– Pr
     /// </summary>
-    public Positioning Positioning { get; set; } = Positioning.Relative;
+    public Position Position { get; set; } = Position.Relative;
 
     /// <summary>
-    /// ÍÏ¶¯ºöÂÔ£¬Ä¬ÈÏÎª <see langword="false"/> ²»»áÓ°Ïì³¤±²ÖĞ¿ÉÍÏ¶¯ÔªËØÍÏ¶¯
+    /// æ‹–åŠ¨å¿½ç•¥ï¼Œé»˜è®¤ä¸º <see langword="false"/> ä¸ä¼šå½±å“é•¿è¾ˆä¸­å¯æ‹–åŠ¨å…ƒç´ æ‹–åŠ¨
     /// </summary>
     public bool DragIgnore { get; set; }
 
-    public bool LeftMouseButtonPressed { get; set; }
-    public bool RightMouseButtonPressed { get; set; }
+    public bool LeftMousePressed { get; set; }
+    public bool RightMousePressed { get; set; }
+    public bool MiddleMousePressed { get; set; }
 
     /// <summary>
-    /// Ê¹ÓÃÖ¸¶¨µÄ¿í¶È
+    /// ä½¿ç”¨æŒ‡å®šçš„å®½åº¦ (å…ƒç´ é»˜è®¤åªèƒ½è¢«å­å…ƒç´ æ’‘èµ·)
     /// </summary>
-    public bool SpecifyWidth { get; set; } = false;
+    public bool SpecifyWidth { get; set; }
 
     /// <summary>
-    /// Ê¹ÓÃÖ¸¶¨µÄ¸ß¶È
+    /// ä½¿ç”¨æŒ‡å®šçš„é«˜åº¦ (å…ƒç´ é»˜è®¤åªèƒ½è¢«å­å…ƒç´ æ’‘èµ·)
     /// </summary>
-    public bool SpecifyHeight { get; set; } = false;
+    public bool SpecifyHeight { get; set; }
+
+    /// <summary>
+    /// ç”¨äºå¸ƒå±€è®¡ç®—
+    /// </summary>
+    protected List<UIElement> RelativeElements { get; } = [];
+
+    /// <summary>
+    /// ç”¨äºå¸ƒå±€è®¡ç®—
+    /// </summary>
+    protected List<UIElement> AbsoluteElements { get; } = [];
 }

@@ -6,14 +6,11 @@ using System.Threading.Tasks;
 
 namespace SilkyUI.BasicElements;
 
-public partial class View : UIElement
+public partial class View
 {
-    public Vector4 Rounded = new(0f);
-    public float Border = 2f;
-    public Color BgColor = Color.Transparent;
-    public Color BorderColor = Color.Transparent;
+    public RoundedRectangle RoundedRectangle = new();
 
     public Matrix TransformMatrix = Matrix.Identity;
 
-    public Vector2 Gap = Vector2.Zero;
+    public Vector2 Gap;
 }

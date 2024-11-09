@@ -15,6 +15,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="OneOf" Version="3.0.271" />
+		<PackageReference Include="Reflections" Version="3.0.0" />
 		<PackageReference Include="Solaestas.tModLoader.ModBuilder" Version="1.6.1" />
 	</ItemGroup>
 

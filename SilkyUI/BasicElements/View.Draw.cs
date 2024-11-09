@@ -9,7 +9,7 @@ public partial class View
     /// </summary>
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
-        DrawSDFRectangle();
+        RoundedRectangle.Draw(GetDimensions().Position(), GetDimensions().Size(), FinallyDrawBorder, TransformMatrix);
         base.DrawSelf(spriteBatch);
     }
 
@@ -18,7 +18,7 @@ public partial class View
     /// </summary>
     protected virtual void UpdateTransformMatrix()
     {
-        if (this.RecentParentView() is View parent)
+        if (this.RecentParentView() is { } parent)
             TransformMatrix = parent.TransformMatrix;
         else
             TransformMatrix = Main.UIScaleMatrix;
@@ -102,8 +102,7 @@ public partial class View
         var position = GetDimensions().Position();
         var size = GetDimensions().Size();
 
-        SDFRectangle.HasBorder(position, size, Rounded,
-            Color.Transparent, Border, BorderColor, TransformMatrix);
+        RoundedRectangle.DrawBorder(position, size, TransformMatrix);
     }
 
     /// <summary>
@@ -119,10 +118,10 @@ public partial class View
             var position = Parent.GetDimensions().Position();
 
             foreach (var uie in from uie in Elements
-                                let childPosition = uie.GetDimensions().Position()
-                                let childSize = uie.GetDimensions().Size()
-                                where Collision.CheckAABBvAABBCollision(position, size, childPosition, childSize)
-                                select uie)
+                     let childPosition = uie.GetDimensions().Position()
+                     let childSize = uie.GetDimensions().Size()
+                     where Collision.CheckAABBvAABBCollision(position, size, childPosition, childSize)
+                     select uie)
             {
                 uie.Draw(spriteBatch);
             }
@@ -152,32 +151,5 @@ public partial class View
         }
 
         HoverTimer.Update();
-    }
-
-    /// <summary>
-    /// 绘制 SDF 圆角矩形
-    /// </summary>
-    protected void DrawSDFRectangle()
-    {
-        var position = GetDimensions().Position();
-        var size = GetDimensions().Size();
-
-        if (Border > 0)
-        {
-            if (BorderColor == Color.Transparent || FinallyDrawBorder)
-            {
-                if (BgColor != Color.Transparent)
-                    SDFRectangle.NoBorder(position + new Vector2(Border), size - new Vector2(Border * 2f),
-                        Rounded - new Vector4(Border), BgColor, TransformMatrix);
-            }
-            else
-            {
-                SDFRectangle.HasBorder(position, size, Rounded, BgColor, Border, BorderColor, TransformMatrix);
-            }
-        }
-        else if (BgColor != Color.Transparent)
-        {
-            SDFRectangle.NoBorder(position, size, Rounded, BgColor, TransformMatrix);
-        }
     }
 }
