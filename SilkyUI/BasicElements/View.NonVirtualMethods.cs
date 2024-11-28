@@ -7,15 +7,15 @@ public partial class View
     /// </summary>
     public void ClassifyElements()
     {
-        RelativeElements.Clear();
-        AbsoluteElements.Clear();
+        FlowElements.Clear();
+        NonFlowElements.Clear();
 
         Elements.ForEach(element =>
         {
-            if (element is View { Position: Position.Relative })
-                RelativeElements.Add(element);
+            if (element is View { Position: Position.Relative } view)
+                FlowElements.Add(view);
             else
-                AbsoluteElements.Add(element);
+                NonFlowElements.Add(element);
         });
     }
 

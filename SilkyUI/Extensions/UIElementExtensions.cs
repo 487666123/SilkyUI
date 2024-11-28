@@ -51,36 +51,50 @@ public static class UIElementExtensions
 
     #region Offset Position
 
-    public static T SetDimensions<T>(this T uie, Vector2 position) where T : UIElement
+    public static T DimensionsSet<T>(this T uie, Vector2 position) where T : UIElement
     {
-        uie.Offset(position - uie._outerDimensions.Position());
+        uie.DimensionsOffset(position - uie._outerDimensions.Position());
 
         return uie;
     }
 
-    public static T OffsetX<T>(this T uie, float offset) where T : UIElement
+    public static T DimensionsSetX<T>(this T uie, float position) where T : UIElement
+    {
+        uie.DimensionsOffsetX(position - uie._outerDimensions.X);
+
+        return uie;
+    }
+
+    public static T DimensionsSetY<T>(this T uie, float position) where T : UIElement
+    {
+        uie.DimensionsOffsetY(position - uie._outerDimensions.Y);
+
+        return uie;
+    }
+
+    public static T DimensionsOffsetX<T>(this T uie, float offset) where T : UIElement
     {
         uie._outerDimensions.X += offset;
         uie._dimensions.X += offset;
         uie._innerDimensions.X += offset;
 
-        uie.Elements.ForEach(element => element.OffsetX(offset));
+        uie.Elements.ForEach(element => element.DimensionsOffsetX(offset));
 
         return uie;
     }
 
-    public static T OffsetY<T>(this T uie, float offset) where T : UIElement
+    public static T DimensionsOffsetY<T>(this T uie, float offset) where T : UIElement
     {
         uie._outerDimensions.Y += offset;
         uie._dimensions.Y += offset;
         uie._innerDimensions.Y += offset;
 
-        uie.Elements.ForEach(element => element.OffsetY(offset));
+        uie.Elements.ForEach(element => element.DimensionsOffsetY(offset));
 
         return uie;
     }
 
-    public static T Offset<T>(this T uie, Vector2 offset) where T : UIElement
+    public static T DimensionsOffset<T>(this T uie, Vector2 offset) where T : UIElement
     {
         uie._outerDimensions.X += offset.X;
         uie._outerDimensions.Y += offset.Y;
@@ -91,7 +105,7 @@ public static class UIElementExtensions
         uie._innerDimensions.X += offset.X;
         uie._innerDimensions.Y += offset.Y;
 
-        uie.Elements.ForEach(element => element.Offset(offset));
+        uie.Elements.ForEach(element => element.DimensionsOffset(offset));
 
         return uie;
     }

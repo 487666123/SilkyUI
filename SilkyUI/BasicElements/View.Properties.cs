@@ -50,12 +50,12 @@ public partial class View : UIElement
     /// <summary>
     /// 是相对定位
     /// </summary>
-    public bool IsRelativePosition => Position is Position.Relative;
+    public bool IsRelative => Position is Position.Relative;
 
     /// <summary>
     /// 是绝对定位
     /// </summary>
-    public bool IsAbsolutePosition => Position is Position.Absolute;
+    public bool IsAbsolute => Position is Position.Absolute;
 
     public Display Display { get; set; } = Display.InlineFlex;
 
@@ -94,22 +94,22 @@ public partial class View : UIElement
     public bool MiddleMousePressed { get; set; }
 
     /// <summary>
-    /// 使用指定的宽度 (元素默认只能被子元素撑起)
+    /// 指定宽, 否则会被子元素撑起
     /// </summary>
     public bool SpecifyWidth { get; set; }
 
     /// <summary>
-    /// 使用指定的高度 (元素默认只能被子元素撑起)
+    /// 指定高, 否则会被子元素撑起
     /// </summary>
     public bool SpecifyHeight { get; set; }
 
     /// <summary>
-    /// 用于布局计算
+    /// 文档流元素
     /// </summary>
-    protected List<UIElement> RelativeElements { get; } = [];
+    protected List<View> FlowElements { get; } = [];
 
     /// <summary>
-    /// 用于布局计算
+    /// 非文档流元素
     /// </summary>
-    protected List<UIElement> AbsoluteElements { get; } = [];
+    protected List<UIElement> NonFlowElements { get; } = [];
 }
