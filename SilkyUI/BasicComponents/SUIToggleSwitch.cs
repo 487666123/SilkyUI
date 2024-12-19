@@ -24,13 +24,13 @@ public class SUIToggleSwitch : View
 
     public readonly AnimationTimer SwitchTimer = new();
 
-    public SUIToggleSwitch(UserInterfaceStyle style)
+    public SUIToggleSwitch()
     {
         SetPadding(4f);
 
-        ToggleCircleColor = style.GetColor("BorderColor");
+        ToggleCircleColor = new Color(18, 18, 38);
         Border = 2f;
-        BorderColor = style.GetColor("BorderColor");
+        BorderColor = new Color(18, 18, 38);
     }
 
     public void Toggle()

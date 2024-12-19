@@ -6,13 +6,12 @@ public abstract class BasicBody : View
     {
         Border = 0;
         Width.Percent = Height.Percent = 1f;
-        Recalculate();
     }
 
     /// <summary>
-    /// 启用 body
+    /// 启用
     /// </summary>
-    public abstract bool Enabled { get; set; }
+    public abstract bool IsEnabled { get; set; }
 
     /// <summary>
     /// 是否不可选中
@@ -27,30 +26,29 @@ public abstract class BasicBody : View
     public override void Update(GameTime gameTime)
     {
         base.Update(gameTime);
-
-        CheckWhetherRecalculate(out bool recalculate);
-
-        if (recalculate)
-        {
-            Recalculate();
-        }
+        CheckScreenSizeChanges();
     }
 
-    private Vector2 _lastScreenSize = PlayerInput.OriginalScreenSize / Main.UIScale;
+    public event Action<Vector2, Vector2> ScreenSizeChanges;
+
+    protected static Vector2 GetCurrentScreenSize() => PlayerInput.OriginalScreenSize / Main.UIScale;
+    protected Vector2 LastScreenSize { get; set; } = GetCurrentScreenSize();
 
     /// <summary>
     /// 总是执行
     /// </summary>
-    public virtual void CheckWhetherRecalculate(out bool recalculate)
+    protected virtual void CheckScreenSizeChanges()
     {
-        recalculate = false;
+        var currentScreenSize = GetCurrentScreenSize();
+        if (currentScreenSize == LastScreenSize) return;
+        OnScreenSizeChanges(currentScreenSize, LastScreenSize);
+        LastScreenSize = currentScreenSize;
+    }
 
-        Vector2 currentScreenSize = PlayerInput.OriginalScreenSize / Main.UIScale;
-        if (currentScreenSize != _lastScreenSize)
-        {
-            recalculate = true;
-            _lastScreenSize = currentScreenSize;
-        }
+    protected virtual void OnScreenSizeChanges(Vector2 newVector2, Vector2 oldVector2)
+    {
+        ScreenSizeChanges?.Invoke(newVector2, oldVector2);
+        Recalculate();
     }
 
     /*public virtual bool RenderTarget2DDraw => false;

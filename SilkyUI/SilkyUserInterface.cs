@@ -1,42 +1,82 @@
-﻿using SilkyUI.UserInterfaces;
-
-namespace SilkyUI;
+﻿namespace SilkyUI;
 
 #region enum and struct
-public enum MouseButtonType { Left, Middle, Right }
-public enum MouseEventType { Down, Up }
+
+public enum MouseButtonType
+{
+    Left,
+    Middle,
+    Right
+}
+
+public enum MouseEventType
+{
+    Down,
+    Up
+}
 
 /// <summary>
 /// 鼠标按键状态
 /// </summary>
-public struct MouseStatusMinor(bool leftButton, bool middleButton, bool rightButton)
+public class MouseStatusMinor
 {
-    public bool
-        LeftButton = leftButton,
-        MiddleButton = middleButton,
-        RightButton = rightButton;
+    private bool
+        _leftButton,
+        _middleButton,
+        _rightButton;
+
+    public void SetState(MouseStatusMinor status)
+    {
+        _leftButton = status._leftButton;
+        _middleButton = status._middleButton;
+        _rightButton = status._rightButton;
+    }
 
     public void SetState(bool leftButton, bool middleButton, bool rightButton)
     {
-        LeftButton = leftButton; MiddleButton = middleButton; RightButton = rightButton;
+        _leftButton = leftButton;
+        _middleButton = middleButton;
+        _rightButton = rightButton;
     }
 
-    public readonly bool this[MouseButtonType button] => button switch
+    public bool this[MouseButtonType button]
     {
-        MouseButtonType.Left => LeftButton,
-        MouseButtonType.Middle => MiddleButton,
-        MouseButtonType.Right => RightButton,
-        _ => throw new NotImplementedException()
-    };
+        get
+        {
+            return button switch
+            {
+                MouseButtonType.Left => _leftButton,
+                MouseButtonType.Middle => _middleButton,
+                MouseButtonType.Right => _rightButton,
+                _ => _leftButton,
+            };
+        }
+        set
+        {
+            switch (button)
+            {
+                default:
+                case MouseButtonType.Left:
+                    _leftButton = value;
+                    break;
+                case MouseButtonType.Right:
+                    _rightButton = value;
+                    break;
+                case MouseButtonType.Middle:
+                    _middleButton = value;
+                    break;
+            }
+        }
+    }
 }
 
-public struct MouseTarget()
+public class MouseTarget
 {
-    public UIElement LeftButton = null, MiddleButton = null, RightButton = null;
+    public UIElement LeftButton, MiddleButton, RightButton;
 
     public UIElement this[MouseButtonType button]
     {
-        readonly get
+        get
         {
             return button switch
             {
@@ -50,6 +90,7 @@ public struct MouseTarget()
         {
             switch (button)
             {
+                default:
                 case MouseButtonType.Left:
                     LeftButton = value;
                     break;
@@ -63,20 +104,16 @@ public struct MouseTarget()
         }
     }
 }
+
 #endregion
 
 /// <summary>
 /// 处理交互逻辑
 /// </summary>
-/// <param name="insertionPoint"></param>
-/// <param name="name"></param>
-public class SilkyUserInterface()
+public class SilkyUserInterface
 {
     public static SilkyUserInterfaceManager Manager => SilkyUserInterfaceManager.Instance;
 
-    /// <summary>
-    /// 变换矩阵
-    /// </summary>
     public Matrix TransformMatrix;
 
     /// <summary>
@@ -84,59 +121,50 @@ public class SilkyUserInterface()
     /// </summary>
     public BasicBody BasicBody { get; private set; }
 
-    public Vector2 MouseFocus { get; private set; }
+    public Vector2 MousePosition { get; private set; }
     public UIElement CurrentHoverTarget { get; private set; }
-    public UIElement PreviousHoverTarget { get; private set; }
+    public UIElement LastHoverTarget { get; private set; }
 
-    public MouseTarget PreviousMouseTargets => _previousMouseTargets;
-    private MouseTarget _previousMouseTargets = new();
+    public MouseTarget LastMouseTargets { get; } = new();
 
-    private MouseStatusMinor _mouseStatus;
-    private MouseStatusMinor _previousMouseStatus;
+    private readonly MouseStatusMinor _mouseStatus = new();
+    private readonly MouseStatusMinor _lastMouseStatus = new();
 
-    public void SetBasicBody(BasicBody basicBody)
+    public void SetBasicBody(BasicBody basicBody = null)
     {
-        if (BasicBody != basicBody)
-        {
-            BasicBody = basicBody;
+        if (BasicBody == basicBody) return;
+        BasicBody = basicBody;
 
-            if (BasicBody != null)
-            {
-                BasicBody.Activate();
-                BasicBody.Recalculate();
-            }
-        }
+        if (BasicBody == null) return;
+        BasicBody.Activate();
+        BasicBody.Recalculate();
     }
 
     /// <summary>
     /// 更新鼠标位置
     /// </summary>
-    public void UpdateMouseFocus()
-    {
-        MouseFocus = SilkyUserInterfaceManager.MouseScreen;
-    }
+    private void UpdateMousePosition() => MousePosition = SilkyUserInterfaceManager.MouseScreen;
 
     /// <summary>
     /// 更新鼠标悬停目标
     /// </summary>
-    public void UpdateHoverTarget()
+    private void UpdateHoverTarget()
     {
-        PreviousHoverTarget = CurrentHoverTarget;
+        LastHoverTarget = CurrentHoverTarget;
         CurrentHoverTarget =
-            Manager.MouseFocusHasUIElement ||
-            BasicBody.IsNotSelectable ? null : BasicBody.GetElementAt(Vector2.Transform(MouseFocus, TransformMatrix));
+            Manager.HasMouseFocusUIElement ||
+            BasicBody.IsNotSelectable
+                ? null
+                : BasicBody.GetElementAt(Vector2.Transform(MousePosition, TransformMatrix));
     }
 
     public void Update(GameTime gameTime)
     {
-        if (BasicBody is null or { Enabled: false })
-        {
-            return;
-        }
+        if (BasicBody is null or { IsEnabled: false }) return;
 
-        UpdateMouseFocus();
+        UpdateMousePosition();
 
-        _previousMouseStatus = _mouseStatus;
+        _lastMouseStatus.SetState(_mouseStatus);
         _mouseStatus.SetState(Main.mouseLeft, Main.mouseMiddle, Main.mouseRight);
 
         try
@@ -148,43 +176,50 @@ public class SilkyUserInterface()
                 Manager.MouseFocusUIElement = CurrentHoverTarget;
             }
 
-            if (CurrentHoverTarget != PreviousHoverTarget)
+            if (CurrentHoverTarget != LastHoverTarget)
             {
-                PreviousHoverTarget?.MouseOut(new(CurrentHoverTarget, MouseFocus));
-                CurrentHoverTarget?.MouseOver(new(CurrentHoverTarget, MouseFocus));
+                LastHoverTarget?.MouseOut(new UIMouseEvent(CurrentHoverTarget, MousePosition));
+                CurrentHoverTarget?.MouseOver(new UIMouseEvent(CurrentHoverTarget, MousePosition));
             }
 
             // 遍历三种鼠标按键：左键、右键和中键
             foreach (MouseButtonType mouseButton in Enum.GetValues(typeof(MouseButtonType)))
             {
-                // 判断当前按键是否被按下
-                if (_mouseStatus[mouseButton] && !_previousMouseStatus[mouseButton])
+                switch (_mouseStatus[mouseButton])
                 {
-                    // 如果目标元素存在且可以被优先处理，则将视图置于顶层
-                    if (CurrentHoverTarget is not null && Manager.MouseFocusUIElement == CurrentHoverTarget)
+                    // 判断当前按键是否被按下
+                    case true when !_lastMouseStatus[mouseButton]:
                     {
-                        Manager.MoveCurrentUserIntrerfaceToTop();
-                    }
+                        // 如果目标元素存在且可以被优先处理，则将视图置于顶层
+                        if (CurrentHoverTarget is not null && Manager.MouseFocusUIElement == CurrentHoverTarget)
+                        {
+                            Manager.MoveCurrentUserInterfaceToTop();
+                        }
 
-                    HandleMouseEvent(MouseEventType.Down, mouseButton);
-                }
-                else if (!_mouseStatus[mouseButton] && _previousMouseStatus[mouseButton])
-                {
-                    HandleMouseEvent(MouseEventType.Up, mouseButton);
+                        HandleMouseEvent(MouseEventType.Down, mouseButton);
+                        break;
+                    }
+                    case false when _lastMouseStatus[mouseButton]:
+                        HandleMouseEvent(MouseEventType.Up, mouseButton);
+                        break;
                 }
             }
 
             if (PlayerInput.ScrollWheelDeltaForUI != 0)
             {
-                CurrentHoverTarget?.ScrollWheel(new UIScrollWheelEvent(CurrentHoverTarget, MouseFocus, PlayerInput.ScrollWheelDeltaForUI));
+                CurrentHoverTarget?.ScrollWheel(new UIScrollWheelEvent(CurrentHoverTarget, MousePosition,
+                    PlayerInput.ScrollWheelDeltaForUI));
             }
 
             BasicBody.Update(gameTime);
         }
-        catch (Exception ex) { Console.WriteLine(ex.ToString()); }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     }
 
-    public static Action<UIMouseEvent> GetMouseDownEvent(MouseButtonType mouseButtonType, UIElement element)
+    private static Action<UIMouseEvent> GetMouseDownEvent(MouseButtonType mouseButtonType, UIElement element)
     {
         if (element is null)
             return null;
@@ -198,7 +233,7 @@ public class SilkyUserInterface()
         };
     }
 
-    public static Action<UIMouseEvent> GetMouseUpEvent(MouseButtonType mouseButtonType, UIElement element)
+    private static Action<UIMouseEvent> GetMouseUpEvent(MouseButtonType mouseButtonType, UIElement element)
     {
         if (element is null)
             return null;
@@ -212,7 +247,7 @@ public class SilkyUserInterface()
         };
     }
 
-    public static Action<UIMouseEvent> GetClickEvent(MouseButtonType mouseButtonType, UIElement element)
+    private static Action<UIMouseEvent> GetClickEvent(MouseButtonType mouseButtonType, UIElement element)
     {
         if (element is null)
             return null;
@@ -232,22 +267,22 @@ public class SilkyUserInterface()
 
         if (eventType is MouseEventType.Down)
         {
-            evt = new UIMouseEvent(CurrentHoverTarget, MouseFocus);
+            evt = new UIMouseEvent(CurrentHoverTarget, MousePosition);
             GetMouseDownEvent(mouseButton, CurrentHoverTarget)?.Invoke(evt);
         }
         else
         {
-            evt = new UIMouseEvent(CurrentHoverTarget, MouseFocus);
-            GetMouseUpEvent(mouseButton, _previousMouseTargets[mouseButton])?.Invoke(evt);
+            evt = new UIMouseEvent(CurrentHoverTarget, MousePosition);
+            GetMouseUpEvent(mouseButton, LastMouseTargets[mouseButton])?.Invoke(evt);
 
-            if (_previousMouseTargets[mouseButton] == CurrentHoverTarget)
+            if (LastMouseTargets[mouseButton] == CurrentHoverTarget)
             {
-                evt = new UIMouseEvent(CurrentHoverTarget, MouseFocus);
-                GetClickEvent(mouseButton, _previousMouseTargets[mouseButton])?.Invoke(evt);
+                evt = new UIMouseEvent(CurrentHoverTarget, MousePosition);
+                GetClickEvent(mouseButton, LastMouseTargets[mouseButton])?.Invoke(evt);
             }
         }
 
-        _previousMouseTargets[mouseButton] = CurrentHoverTarget;
+        LastMouseTargets[mouseButton] = CurrentHoverTarget;
     }
 
     /// <summary>
@@ -255,11 +290,7 @@ public class SilkyUserInterface()
     /// </summary>
     public bool Draw()
     {
-        if (BasicBody?.Enabled ?? false)
-        {
-            BasicBody.Draw(Main.spriteBatch);
-        }
-
+        if (BasicBody?.IsEnabled ?? false) BasicBody.Draw(Main.spriteBatch);
         return true;
     }
 }

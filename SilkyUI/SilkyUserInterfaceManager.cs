@@ -5,12 +5,11 @@ public class SilkyUserInterfaceManager
     private static readonly Lazy<SilkyUserInterfaceManager> LazyInstance =
         new(() => new SilkyUserInterfaceManager());
 
-    /// <summary>
-    /// 线程安全的单例模式
-    /// </summary>
     public static SilkyUserInterfaceManager Instance => LazyInstance.Value;
 
-    private SilkyUserInterfaceManager() { }
+    private SilkyUserInterfaceManager()
+    {
+    }
 
     /// <summary>
     /// 鼠标位置 [<see cref="Main.mouseX"/>, <see cref="Main.mouseY"/>]
@@ -22,27 +21,27 @@ public class SilkyUserInterfaceManager
     /// <summary>
     /// 当前的 <see cref="UserInterface"/>
     /// </summary>
-    private SilkyUserInterface CurrentUserInterface { get; set; }
+    public SilkyUserInterface CurrentUserInterface { get; private set; }
 
     /// <summary>
     /// 当前插入点, 用于 <see cref="UpdateUI(GameTime)"/>
     /// </summary>
-    public string CurrentInsertionPoint { get; protected set; } = string.Empty;
+    public string CurrentInsertionPoint { get; private set; } = string.Empty;
 
     /// <summary>
     /// 当前的 <see cref="UserInterface"/> 所在 List
     /// </summary>
-    public List<SilkyUserInterface> CurrentUserInterfaces { get; protected set; }
+    public List<SilkyUserInterface> CurrentUserInterfaces { get; private set; }
 
     /// <summary>
     /// 鼠标焦点元素
     /// </summary>
-    public UIElement MouseFocusUIElement { get; set; } = null;
+    public UIElement MouseFocusUIElement { get; set; }
 
     /// <summary>
     /// 当前鼠标焦点下是否有元素
     /// </summary>
-    public bool MouseFocusHasUIElement => MouseFocusUIElement is not null;
+    public bool HasMouseFocusUIElement => MouseFocusUIElement is not null;
 
     /// <summary>
     /// <see cref="UserInterface"/> 实例绑定的 <see cref="BasicBody"/> <see cref="Type"/>
@@ -57,7 +56,7 @@ public class SilkyUserInterfaceManager
     /// <summary>
     /// 界面层顺序
     /// </summary>
-    private readonly List<string> InterfaceLayerOrders = [];
+    private readonly List<string> _interfaceLayerOrders = [];
 
     /// <summary>
     /// <see cref="string"/> 插入点<br/>
@@ -67,7 +66,7 @@ public class SilkyUserInterfaceManager
 
     #endregion
 
-    public SilkyUserInterface RegisterUserInterface(
+    public void RegisterUserInterface(
         AutoloadUserInterfaceAttribute autoloadAttribute, Type basicBodyType)
     {
         var userInterface = new SilkyUserInterface();
@@ -75,20 +74,16 @@ public class SilkyUserInterfaceManager
         BasicBodyTypes[userInterface] = basicBodyType;
         BasicBodyTypesAutoloadInfo[userInterface] = autoloadAttribute;
 
-        if (SilkyUserInterfaces.TryGetValue(autoloadAttribute.InsertionPoint,
-            out List<SilkyUserInterface> userInterfaces))
+        if (SilkyUserInterfaces.TryGetValue(autoloadAttribute.InsertionPoint, out var userInterfaces))
             userInterfaces.Add(userInterface);
         else
             SilkyUserInterfaces[autoloadAttribute.InsertionPoint] = [userInterface];
-
-        return userInterface;
     }
 
     /// <summary>
     /// 移动当前 UserInterface 到顶层
     /// </summary>
-    /// <param name="userInterface"></param>
-    public void MoveCurrentUserIntrerfaceToTop()
+    public void MoveCurrentUserInterfaceToTop()
     {
         if (CurrentUserInterfaces.Remove(CurrentUserInterface))
         {
@@ -105,9 +100,9 @@ public class SilkyUserInterfaceManager
 
         try
         {
-            // 绘制顺序, 所以事件处理要倒叙
-            foreach (string insertionPoint in InterfaceLayerOrders
-                .Where(SilkyUserInterfaces.ContainsKey).Reverse())
+            // 绘制顺序, 所以事件处理要倒序
+            foreach (var insertionPoint in _interfaceLayerOrders
+                         .Where(SilkyUserInterfaces.ContainsKey).Reverse())
             {
                 var userInterfaces = SilkyUserInterfaces[insertionPoint];
                 CurrentUserInterfaces = userInterfaces;
@@ -117,7 +112,7 @@ public class SilkyUserInterfaceManager
                 CurrentUserInterfaces.Clear();
                 CurrentUserInterfaces.AddRange(order);
 
-                for (int i = 0; i < userInterfaces.Count; i++)
+                for (var i = 0; i < userInterfaces.Count; i++)
                 {
                     var userInterface = userInterfaces[i];
                     CurrentInsertionPoint = insertionPoint;
@@ -138,53 +133,56 @@ public class SilkyUserInterfaceManager
     /// </summary>
     public void ModifyInterfaceLayers(List<GameInterfaceLayer> layers)
     {
-        int count = InterfaceLayerOrders.Count;
+        var uiLayerCount = _interfaceLayerOrders.Count;
 
         #region InterfaceLayer.Name 顺序
-        InterfaceLayerOrders.Clear();
 
-        for (int i = 0; i < layers.Count; i++)
+        _interfaceLayerOrders.Clear();
+
+        foreach (var layer in layers
+                     .Where(layer => !_interfaceLayerOrders.Contains(layer.Name)))
         {
-            var layer = layers[i];
-            if (!InterfaceLayerOrders.Contains(layer.Name))
-                InterfaceLayerOrders.Add(layer.Name);
+            _interfaceLayerOrders.Add(layer.Name);
         }
+
         #endregion
 
         #region 向 InterfaceLayer 插入 UI
-        if (count < 1) return;
+
+        if (uiLayerCount < 1) return;
         foreach (var (insertionPoint, userInterfaces) in SilkyUserInterfaces)
         {
+            // 找到插入点
             var index = layers.FindIndex(layer => layer.Name.Equals(insertionPoint));
+            if (index <= -1) continue;
 
-            if (index > -1)
+            // 遍历当前 UI 向插入点插入
+            foreach (var userInterface in userInterfaces)
             {
-                foreach (var userInterface in userInterfaces)
-                {
-                    string name = "UNKNOWN";
-                    if (BasicBodyTypesAutoloadInfo.TryGetValue(userInterface, out var autoload))
+                var name = "UNKNOWN";
+                if (BasicBodyTypesAutoloadInfo.TryGetValue(userInterface, out var autoload))
+                    name = autoload.Name;
+
+                CurrentInsertionPoint = insertionPoint;
+                CurrentUserInterface = userInterface;
+                var userInterfaceLayer = new SilkyUserInterfaceLayer(
+                    userInterface, name,
+                    InterfaceScaleType.UI,
+                    delegate
                     {
-                        name = autoload.Name;
-                    }
+                        CurrentUserInterface = userInterface;
+                        CurrentInsertionPoint = insertionPoint;
+                    },
+                    delegate
+                    {
+                        CurrentUserInterface = null;
+                        CurrentInsertionPoint = null;
+                    });
 
-                    CurrentInsertionPoint = insertionPoint;
-                    CurrentUserInterface = userInterface;
-                    var userInterfaceLayer =
-                        new SilkyUserInterfaceLayer(userInterface, name, InterfaceScaleType.UI,
-                        () =>
-                        {
-                            CurrentUserInterface = userInterface;
-                            CurrentInsertionPoint = insertionPoint;
-                        }, () =>
-                        {
-                            CurrentUserInterface = null;
-                            CurrentInsertionPoint = null;
-                        });
-
-                    layers.Insert(index + 1, userInterfaceLayer);
-                }
+                layers.Insert(index + 1, userInterfaceLayer);
             }
         }
+
         #endregion
     }
 }

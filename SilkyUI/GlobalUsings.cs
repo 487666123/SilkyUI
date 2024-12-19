@@ -6,7 +6,6 @@ global using SilkyUI.BasicElements;
 global using SilkyUI.Extensions;
 global using SilkyUI.Graphics2D;
 global using SilkyUI.Helper;
-global using SilkyUI.Style;
 global using System.Reflection;
 global using Terraria;
 global using Terraria.Audio;

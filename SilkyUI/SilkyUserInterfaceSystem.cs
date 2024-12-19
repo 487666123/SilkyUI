@@ -1,8 +1,5 @@
 ﻿namespace SilkyUI;
 
-/// <summary>
-/// 单例模式
-/// </summary>
 public class SilkyUserInterfaceSystem
 {
     private static readonly Lazy<SilkyUserInterfaceSystem> LazyInstance = new(() => new SilkyUserInterfaceSystem());
@@ -12,43 +9,31 @@ public class SilkyUserInterfaceSystem
     {
     }
 
-    public UserInterfaceStyleManager UserInterfaceStyleManager { get; } = new();
-
     public readonly SilkyUserInterfaceConfiguration UserInterfaceConfiguration = new();
 
     // public readonly RenderTargetPool RenderTargetPool = new();
 
     private bool _initialized = false;
 
-    public enum InitializeResult
-    {
-        Success,
-        Error,
-        Initialized
-    }
-
     /// <summary>
     /// 初始化系统
     /// </summary>
-    public InitializeResult Initialize()
+    public void Initialize()
     {
-        // 确保只执行一次
-        if (_initialized)
-            return InitializeResult.Initialized;
+        if (_initialized) return;
 
-        // 获取程序集所有的类型
         var types = Assembly.GetExecutingAssembly().GetTypes();
+        var basicBodyType = typeof(BasicBody);
 
-        // 扫描
-        foreach (var type in types.Where(type => type.IsSubclassOf(typeof(BasicBody))))
+        // 遍历所有继承自 BasicBody 的类型 (不包含 BasicBody 本身)
+        foreach (var type in types.Where(type => type.IsSubclassOf(basicBodyType)))
         {
-            var autoload = type.GetCustomAttribute<AutoloadUserInterfaceAttribute>();
-            if (autoload is null) continue;
+            if (type.GetCustomAttribute<AutoloadUserInterfaceAttribute>() is not
+                { } autoloadUserInterface) continue;
 
-            SilkyUserInterfaceManager.Instance.RegisterUserInterface(autoload, type);
+            SilkyUserInterfaceManager.Instance.RegisterUserInterface(autoloadUserInterface, type);
         }
 
         _initialized = true;
-        return InitializeResult.Success;
     }
 }

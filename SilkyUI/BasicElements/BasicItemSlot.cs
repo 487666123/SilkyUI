@@ -32,12 +32,12 @@ public class BasicItemSlot : View
     public Vector2 ItemIconOffset;
     public Vector2 ItemIconResize;
 
-    public BasicItemSlot(UserInterfaceStyle style)
+    public BasicItemSlot()
     {
         this.SetPositionPixels(52f, 52f);
-        BgColor = style.GetColor("BackgroundColor");
-        BorderColor = style.GetColor("BackgroundColor");
-        Rounded = new Vector4(style.GetFloat("SmallRounded"));
+        BgColor = new Color(63, 65, 151);
+        BorderColor = new Color(63, 65, 151);
+        Rounded = new Vector4(8f);
     }
 
     /// <summary>

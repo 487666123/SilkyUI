@@ -8,14 +8,14 @@ public partial class View
     public void ClassifyElements()
     {
         FlowElements.Clear();
-        NonFlowElements.Clear();
+        AbsoluteElements.Clear();
 
         Elements.ForEach(element =>
         {
             if (element is View { Position: Position.Relative } view)
                 FlowElements.Add(view);
             else
-                NonFlowElements.Add(element);
+                AbsoluteElements.Add(element);
         });
     }
 

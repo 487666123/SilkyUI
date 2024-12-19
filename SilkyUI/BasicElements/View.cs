@@ -35,12 +35,10 @@ public partial class View
     public virtual CalculatedStyle GetParentDimensions()
     {
         // 没有父元素
-        if (Parent is null)
-            return SilkyUIHelper.GetBasicBodyDimensions();
+        if (Parent is null) return SilkyUIHelper.GetBasicBodyDimensions();
 
         // 父元素不是 View 类则直接返回父元素 innerDimensions
-        if (Parent is not View parent)
-            return Parent.GetInnerDimensions();
+        if (Parent is not View parent) return Parent.GetInnerDimensions();
 
         var container = parent.GetInnerDimensions();
 
@@ -71,16 +69,18 @@ public partial class View
         var left = Left.GetValue(parentDimensions.Width) + parentDimensions.X;
         var top = Top.GetValue(parentDimensions.Height) + parentDimensions.Y;
 
-        var width = SpecifyWidth
-            ? MathHelper.Clamp(Width.GetValue(parentDimensions.Width),
-                MinWidth.GetValue(parentDimensions.Width),
-                MaxWidth.GetValue(parentDimensions.Width))
-            : 0;
-        var height = SpecifyHeight
-            ? MathHelper.Clamp(Height.GetValue(parentDimensions.Height),
-                MinHeight.GetValue(parentDimensions.Height),
-                MaxHeight.GetValue(parentDimensions.Height))
-            : 0;
+        var width =
+            SpecifyWidth
+                ? MathHelper.Clamp(Width.GetValue(parentDimensions.Width),
+                    MinWidth.GetValue(parentDimensions.Width),
+                    MaxWidth.GetValue(parentDimensions.Width))
+                : 0;
+        var height =
+            SpecifyHeight
+                ? MathHelper.Clamp(Height.GetValue(parentDimensions.Height),
+                    MinHeight.GetValue(parentDimensions.Height),
+                    MaxHeight.GetValue(parentDimensions.Height))
+                : 0;
 
         var result = BoxSizing switch
         {
@@ -186,7 +186,7 @@ public partial class View
         }
 
         // 绝对定位
-        NonFlowElements.ForEach(element => element.Recalculate());
+        AbsoluteElements.ForEach(element => element.Recalculate());
     }
 
     /// <summary>
@@ -196,34 +196,31 @@ public partial class View
     {
         var offset = new Vector2();
 
+        // 宽度: auto
         if (!SpecifyWidth)
         {
-            _outerDimensions.Width =
-                content.X + this.HMargin() + this.HPadding() + Border * 2;
+            _outerDimensions.Width = content.X + this.HMargin() + this.HPadding() + Border * 2;
 
             if (Position is Position.Absolute ||
                 (Position is Position.Relative && parent.SpecifyWidth))
-            {
                 offset.X = -_outerDimensions.Width * HAlign;
-            }
         }
 
+        // 高度: auto
         if (!SpecifyHeight)
         {
-            _outerDimensions.Height =
-                content.Y + this.VMargin() + this.VPadding() + Border * 2;
+            _outerDimensions.Height = content.Y + this.VMargin() + this.VPadding() + Border * 2;
 
             if (Position is Position.Absolute ||
                 (Position is Position.Relative && parent.SpecifyHeight))
-            {
                 offset.Y = -_outerDimensions.Height * VAlign;
-            }
         }
 
         if (offset.X != 0)
             if (offset.Y != 0) this.DimensionsOffset(offset);
             else this.DimensionsOffsetX(offset.X);
-        else if (offset.Y != 0) this.DimensionsOffsetY(offset.Y);
+        else if (offset.Y != 0)
+            this.DimensionsOffsetY(offset.Y);
 
         _dimensions = CalculateDimensions(_outerDimensions);
         _innerDimensions = CalculateInnerDimensions(_dimensions);
@@ -237,77 +234,3 @@ public partial class View
     public override bool ContainsPoint(Vector2 point) =>
         base.ContainsPoint(Vector2.Transform(point, Matrix.Invert(TransformMatrix)));
 }
-
-public struct ElementFlow()
-{
-    public readonly List<UIElement> FlowElements = [];
-    public float Start { get; set; }
-    public float End { get; set; }
-    public float Width { get; set; }
-}
-
-#region 垃圾
-
-public abstract class BasicUnit
-{
-    public abstract float GetValue(float parentDimension);
-
-    public override bool Equals(object obj)
-    {
-        return obj is BasicUnit other && other.GetType() == GetType();
-    }
-
-    public override int GetHashCode()
-    {
-        return this.GetType().GetHashCode();
-    }
-}
-
-public class PixelsUnit : BasicUnit
-{
-    public float Value;
-
-    public PixelsUnit(float value)
-    {
-        Value = value;
-    }
-
-    public override float GetValue(float parentDimension)
-    {
-        return Value;
-    }
-}
-
-public class PercentUnit : BasicUnit
-{
-    public float Value;
-
-    public PercentUnit(float value)
-    {
-        Value = value;
-    }
-
-    public override float GetValue(float parentDimension)
-    {
-        return parentDimension * Value;
-    }
-}
-
-public class MiddleUnit
-{
-    private HashSet<BasicUnit> _basicUnits = [];
-
-    public void Set(BasicUnit basicUnit)
-    {
-        if (_basicUnits == null || !_basicUnits.Contains(basicUnit)) return;
-        _basicUnits.Remove(basicUnit);
-        _basicUnits.Add(basicUnit);
-    }
-
-    public float GetValue(float dimensions)
-    {
-        return _basicUnits.Sum(basicUnit => basicUnit.GetValue(dimensions));
-    }
-}
-
-#endregion

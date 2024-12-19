@@ -111,5 +111,5 @@ public partial class View : UIElement
     /// <summary>
     /// 非文档流元素
     /// </summary>
-    protected List<UIElement> NonFlowElements { get; } = [];
+    protected List<UIElement> AbsoluteElements { get; } = [];
 }

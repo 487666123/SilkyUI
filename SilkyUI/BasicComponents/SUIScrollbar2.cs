@@ -25,7 +25,7 @@ public class SUIScrollbar2 : View
     public Vector2 _targetScrollPosition;
 
     public Vector2 OriginalScrollPosition;
-    public Vector2 PreviousTargetScrollPosition;
+    public Vector2 LastTargetScrollPosition;
 
     public Color BarColor = Color.Black * 0.4f;
     public Color BarHoverColor = Color.Black * 0.5f;
@@ -118,7 +118,7 @@ public class SUIScrollbar2 : View
         CurrentScrollPosition = position;
         OriginalScrollPosition = position;
         TargetScrollPosition = position;
-        PreviousTargetScrollPosition = position;
+        LastTargetScrollPosition = position;
     }
 
     public void SetBarPositionDirectly(Vector2 barPosition) =>
@@ -209,9 +209,9 @@ public class SUIScrollbar2 : View
 
     protected virtual void UpdateScrollPosition()
     {
-        if (PreviousTargetScrollPosition != TargetScrollPosition)
+        if (LastTargetScrollPosition != TargetScrollPosition)
         {
-            PreviousTargetScrollPosition = TargetScrollPosition;
+            LastTargetScrollPosition = TargetScrollPosition;
             OriginalScrollPosition = CurrentScrollPosition;
             ScrollTimer.StartForwardUpdateAndReset();
         }

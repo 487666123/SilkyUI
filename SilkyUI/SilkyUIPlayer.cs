@@ -4,17 +4,29 @@ public class SilkyUIPlayer : ModPlayer
 {
     public override void OnEnterWorld()
     {
-        var uiManager = SilkyUserInterfaceManager.Instance;
+        CreateBasicBodyInstancesToSetupUI();
+    }
 
-        // Dictionary => List<SilkyUserInterface>
-        foreach (var userInterface in uiManager.SilkyUserInterfaces.SelectMany(userInterfaces => userInterfaces.Value))
+    private static void CreateBasicBodyInstancesToSetupUI()
+    {
+        var manager = SilkyUserInterfaceManager.Instance;
+
+        foreach (var ui in manager.SilkyUserInterfaces.SelectMany(uis => uis.Value))
         {
-            if (!uiManager.BasicBodyTypes.TryGetValue(userInterface, out var type)) continue;
+            if (manager.BasicBodyTypes.TryGetValue(ui, out var type))
+                ui.SetBasicBody(CreateBasicBodyInstanceByType(type));
+        }
+    }
 
-            if (userInterface != null && Activator.CreateInstance(type) is BasicBody basicBody)
-                userInterface.SetBasicBody(basicBody);
-            else
-                userInterface.SetBasicBody(null);
+    private static BasicBody CreateBasicBodyInstanceByType(Type type)
+    {
+        try
+        {
+            return Activator.CreateInstance(type) as BasicBody;
+        }
+        catch (Exception)
+        {
+            return null;
         }
     }
 }

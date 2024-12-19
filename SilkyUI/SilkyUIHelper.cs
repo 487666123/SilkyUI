@@ -1,6 +1,6 @@
 ﻿namespace SilkyUI;
 
-public class SilkyUIHelper
+public static class SilkyUIHelper
 {
     public static CalculatedStyle GetBasicBodyDimensions()
     {

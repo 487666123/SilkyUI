@@ -110,6 +110,22 @@ public static class UIElementExtensions
         return uie;
     }
 
+    public static T DimensionsOffset<T>(this T uie, float offsetX, float offsetY) where T : UIElement
+    {
+        uie._outerDimensions.X += offsetX;
+        uie._outerDimensions.Y += offsetY;
+
+        uie._dimensions.X += offsetX;
+        uie._dimensions.Y += offsetY;
+
+        uie._innerDimensions.X += offsetX;
+        uie._innerDimensions.Y += offsetY;
+
+        uie.Elements.ForEach(element => element.DimensionsOffset(offsetX, offsetY));
+
+        return uie;
+    }
+
     #endregion
 
     public static T Join<T>(this T uie, UIElement parent) where T : UIElement

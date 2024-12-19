@@ -1,6 +1,6 @@
 ﻿namespace SilkyUI.BasicElements;
 
-public struct RoundedRectangle()
+public class RoundedRectangle
 {
     public Vector4 Rounded = new(0f);
     public float Border = 0f;
