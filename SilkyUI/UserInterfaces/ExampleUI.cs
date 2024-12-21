@@ -40,8 +40,12 @@ public class ExampleUI : BasicBody
         }.Join(MainPanel);
         container1.SetWidth(500f);
 
-        var box1 = new View
-            { BgColor = Color.White * 0.5f }.Join(container1);
+        var box1 = new SUIText
+        {
+            IsWrapped = true,
+            TextOrKey = GetType().FullName,
+            BgColor = Color.White * 0.5f
+        }.Join(container1);
         box1.SetSize(100f, 100f);
 
         var box2 = new View

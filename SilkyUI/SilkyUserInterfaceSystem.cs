@@ -9,11 +9,11 @@ public class SilkyUserInterfaceSystem
     {
     }
 
-    public readonly SilkyUserInterfaceConfiguration UserInterfaceConfiguration = new();
+    public readonly SilkyUserInterfaceConfiguration Configuration = new();
 
     // public readonly RenderTargetPool RenderTargetPool = new();
 
-    private bool _initialized = false;
+    private bool _initialized;
 
     /// <summary>
     /// 初始化系统
@@ -22,16 +22,19 @@ public class SilkyUserInterfaceSystem
     {
         if (_initialized) return;
 
-        var types = Assembly.GetExecutingAssembly().GetTypes();
+        var assemblies = ModLoader.Mods.Select(mod => mod.Code);
         var basicBodyType = typeof(BasicBody);
 
-        // 遍历所有继承自 BasicBody 的类型 (不包含 BasicBody 本身)
-        foreach (var type in types.Where(type => type.IsSubclassOf(basicBodyType)))
+        foreach (var assembly in assemblies)
         {
-            if (type.GetCustomAttribute<AutoloadUserInterfaceAttribute>() is not
-                { } autoloadUserInterface) continue;
+            var types = assembly.GetTypes();
+            foreach (var type in types.Where(type => type.IsSubclassOf(basicBodyType)))
+            {
+                if (type.GetCustomAttribute<AutoloadUserInterfaceAttribute>() is not
+                    { } autoloadUserInterface) continue;
 
-            SilkyUserInterfaceManager.Instance.RegisterUserInterface(autoloadUserInterface, type);
+                SilkyUserInterfaceManager.Instance.RegisterUserInterface(autoloadUserInterface, type);
+            }
         }
 
         _initialized = true;

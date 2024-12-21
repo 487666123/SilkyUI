@@ -2,30 +2,16 @@
 
 public class SilkyUserInterfaceConfiguration
 {
-    private float _largeFontOffset;
-
     /// <summary>
-    /// 大字体 Y 轴偏移
+    /// 不同字体的 Y 轴偏移量
     /// </summary>
-    public float LargeFontOffset
+    public Dictionary<DynamicSpriteFont, float> FontYAxisOffset { get; } = [];
+
+    public SilkyUserInterfaceConfiguration()
     {
-        get { return _largeFontOffset; }
-        set { _largeFontOffset = value; }
+        // 正常大小的字体, 使用的地方最多
+        FontYAxisOffset[FontAssets.MouseText.Value] = 5f;
+        // 大概是正常大小字体两倍大, 通常是用于标题的字体
+        FontYAxisOffset[FontAssets.DeathText.Value] = 10f;
     }
-
-    private float _normalFontOffset;
-    /// <summary>
-    /// 正常字体 Y 轴偏移
-    /// </summary>
-    public float NormalFontOffset
-    {
-        get { return _normalFontOffset; }
-        set { _normalFontOffset = value; }
-    }
-
-    /// <summary>
-    /// 挑选字体偏移
-    /// </summary>
-    /// <param name="isLarge">大字</param>
-    public float GetFontOffset(bool isLarge) => isLarge ? _largeFontOffset : _normalFontOffset;
 }

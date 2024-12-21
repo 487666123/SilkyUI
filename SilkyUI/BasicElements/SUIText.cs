@@ -3,13 +3,8 @@ using Terraria.UI.Chat;
 
 namespace SilkyUI.BasicElements;
 
-public class SUIText : View
+public partial class SUIText : View
 {
-    /// <summary>
-    /// 使用的字体
-    /// </summary>
-    public DynamicSpriteFont Font => _isLarge ? FontAssets.DeathText.Value : FontAssets.MouseText.Value;
-
     /// <summary>
     /// 原字符串
     /// </summary>
@@ -18,19 +13,37 @@ public class SUIText : View
     #region 常规可控属性
 
     /// <summary>
+    /// 使用的字体
+    /// </summary>
+    public virtual DynamicSpriteFont Font
+    {
+        get => _font ?? FontAssets.MouseText.Value;
+        set
+        {
+            if (_font != value) return;
+            _font = value;
+            RecalculateText();
+        }
+    }
+
+    private DynamicSpriteFont _font = FontAssets.MouseText.Value;
+
+    public void UseDeathText() => Font = FontAssets.DeathText.Value;
+    public void UseMouseText() => Font = FontAssets.MouseText.Value;
+    public bool IsLarge => Font == FontAssets.DeathText.Value;
+
+    /// <summary>
     /// 可以作为 HJson 的 Key，也可直接作为文本。<br/>
-    /// 如果要作为 Key 请设置 KeyMode = true。
+    /// 如果要作为 Key 请设置 <see cref="UseKey"/> = true。
     /// </summary>
     public string TextOrKey
     {
         get => _keyMode ? _textOrKey : Language.GetTextValue(_textOrKey);
         set
         {
-            if (_textOrKey != value)
-            {
-                _textOrKey = value;
-                RecalculateText();
-            }
+            if (_textOrKey == value) return;
+            _textOrKey = value;
+            RecalculateText();
         }
     }
 
@@ -44,47 +57,25 @@ public class SUIText : View
         get => _keyMode;
         set
         {
-            if (_keyMode != value)
-            {
-                _keyMode = value;
-                RecalculateText();
-            }
+            if (_keyMode == value) return;
+            _keyMode = value;
+            RecalculateText();
         }
     }
 
     protected bool _keyMode = false;
 
     /// <summary>
-    /// 使用放大版的字体
-    /// </summary>
-    public bool IsLarge
-    {
-        get => _isLarge;
-        set
-        {
-            if (_isLarge != value)
-            {
-                _isLarge = value;
-                RecalculateText();
-            }
-        }
-    }
-
-    protected bool _isLarge;
-
-    /// <summary>
-    /// 使文本不会越界 (横向)
+    /// 文字是否换行
     /// </summary>
     public bool IsWrapped
     {
         get => _isWrapped;
         set
         {
-            if (_isWrapped != value)
-            {
-                _isWrapped = value;
-                RecalculateText();
-            }
+            if (_isWrapped == value) return;
+            _isWrapped = value;
+            RecalculateText();
         }
     }
 
@@ -99,11 +90,9 @@ public class SUIText : View
         get => _maxCharacterCount;
         set
         {
-            if (_maxCharacterCount != value)
-            {
-                _maxCharacterCount = value;
-                RecalculateText();
-            }
+            if (_maxCharacterCount == value) return;
+            _maxCharacterCount = value;
+            RecalculateText();
         }
     }
 
@@ -117,11 +106,9 @@ public class SUIText : View
         get => _maxLines;
         set
         {
-            if (_maxLines != value)
-            {
-                _maxLines = value;
-                RecalculateText();
-            }
+            if (_maxLines == value) return;
+            _maxLines = value;
+            RecalculateText();
         }
     }
 
@@ -225,26 +212,27 @@ public class SUIText : View
     {
         base.DrawSelf(spriteBatch);
 
-        var inner = GetInnerDimensions();
+        var innerSize = GetInnerDimensions().Size();
+        var innerPos = GetInnerDimensions().Position();
 
-        if (LastString != OriginalString || _isWrapped && LastInnerWidth != inner.Width)
+        // 文本变化时或者宽度变化时, 重新计算
+        if (LastString != OriginalString || (_isWrapped && LastInnerWidth != innerSize.X))
         {
-            LastInnerWidth = inner.Width;
+            LastInnerWidth = innerSize.X;
             RecalculateText();
         }
 
-        Vector2 innerSize = inner.Size();
-        Vector2 innerPos = inner.Position();
-
-        Vector2 textSize = TextSize;
+        var textSize = TextSize;
         // 无字符时会出问题，加上下面这两行就好了
         if (textSize.Y < Font.LineSpacing)
             textSize.Y = Font.LineSpacing;
-        Vector2 textPos = innerPos + TextOffset;
+        var textPos = innerPos + TextOffset;
         textPos += TextPercentOffset * innerSize;
         textPos += TextAlign * (innerSize - textSize * TextScale);
         textPos -= TextOrigin * TextSize * TextScale;
-        textPos.Y += TextScale * SilkyUserInterfaceSystem.Instance.UserInterfaceConfiguration.GetFontOffset(_isLarge);
+
+        SilkyUserInterfaceSystem.Instance.Configuration.FontYAxisOffset.TryGetValue(Font, out var yAxisOffset);
+        textPos.Y += TextScale * yAxisOffset;
 
         DrawColorCodedStringShadow(spriteBatch, Font, FinalTextSnippets,
             textPos, TextBorderColor, 0f, Vector2.Zero, new Vector2(TextScale), -1f, TextBorder * TextScale);
@@ -259,9 +247,9 @@ public class SUIText : View
         Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, float maxWidth = -1f,
         float spread = 2f)
     {
-        for (int i = 0; i < ShadowDirections.Length; i++)
+        foreach (var offset in ShadowDirections)
         {
-            DrawColorCodedString(spriteBatch, font, snippets, position + ShadowDirections[i] * spread, baseColor,
+            DrawColorCodedString(spriteBatch, font, snippets, position + offset * spread, baseColor,
                 rotation, origin, baseScale, out var _, maxWidth, ignoreColors: true);
         }
     }
@@ -270,26 +258,26 @@ public class SUIText : View
         Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, out int hoveredSnippet,
         float maxWidth, bool ignoreColors = false)
     {
-        int num = -1;
+        var num = -1;
 
-        Vector2 mousePosition = Main.MouseScreen;
-        Vector2 vector = position;
-        Vector2 result = vector;
+        var mousePosition = Main.MouseScreen;
+        var vector = position;
+        var result = vector;
 
-        float x = font.MeasureString(" ").X;
-        Color color = baseColor;
-        float num3 = 0f;
+        var x = font.MeasureString(" ").X;
+        var color = baseColor;
+        var num3 = 0f;
 
-        for (int i = 0; i < snippets.Length; i++)
+        for (var i = 0; i < snippets.Length; i++)
         {
-            TextSnippet textSnippet = snippets[i];
+            var textSnippet = snippets[i];
             textSnippet.Update();
             if (!ignoreColors)
             {
                 color = textSnippet.GetVisibleColor();
             }
 
-            float num2 = textSnippet.Scale;
+            var num2 = textSnippet.Scale;
             if (textSnippet.UniqueDraw(justCheckingString: false, out var size, spriteBatch, vector, color,
                     baseScale.X * num2))
             {
@@ -303,13 +291,11 @@ public class SUIText : View
                 continue;
             }
 
-            string[] array = Regex.Split(textSnippet.Text, "(\n)");
-            bool flag = true;
-            string[] array2 = array;
-            foreach (string obj in array2)
+            var stringArray = textSnippet.Text.Split('\n');
+            var flag = true;
+            foreach (var obj in stringArray)
             {
-                string[] array3 = Regex.Split(obj, "( )");
-                array3 = obj.Split(' ');
+                var array3 = obj.Split(' ');
                 if (obj == "\n")
                 {
                     vector.Y += font.LineSpacing * num3 * baseScale.Y;
@@ -320,7 +306,7 @@ public class SUIText : View
                     continue;
                 }
 
-                for (int k = 0; k < array3.Length; k++)
+                for (var k = 0; k < array3.Length; k++)
                 {
                     if (k != 0)
                     {
@@ -329,7 +315,7 @@ public class SUIText : View
 
                     if (maxWidth > 0f)
                     {
-                        float num4 = font.MeasureString(array3[k]).X * baseScale.X * num2;
+                        var num4 = font.MeasureString(array3[k]).X * baseScale.X * num2;
                         if (vector.X - position.X + num4 > maxWidth)
                         {
                             vector.X = position.X;
@@ -346,7 +332,7 @@ public class SUIText : View
 
                     spriteBatch.DrawString(font, array3[k], vector, color, rotation, origin,
                         baseScale * textSnippet.Scale * num2, SpriteEffects.None, 0f);
-                    Vector2 vector2 = font.MeasureString(array3[k]);
+                    var vector2 = font.MeasureString(array3[k]);
                     if (mousePosition.Between(vector, vector + vector2))
                     {
                         num = i;
@@ -356,7 +342,7 @@ public class SUIText : View
                     result.X = Math.Max(result.X, vector.X);
                 }
 
-                if (array.Length > 1 && flag)
+                if (stringArray.Length > 1 && flag)
                 {
                     vector.Y += font.LineSpacing * num3 * baseScale.Y;
                     vector.X = position.X;

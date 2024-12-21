@@ -7,6 +7,9 @@ public class SilkyUIPlayer : ModPlayer
         CreateBasicBodyInstancesToSetupUI();
     }
 
+    /// <summary>
+    /// 创建所有 UI 的 BasicBody 实例
+    /// </summary>
     private static void CreateBasicBodyInstancesToSetupUI()
     {
         var manager = SilkyUserInterfaceManager.Instance;
@@ -18,6 +21,7 @@ public class SilkyUIPlayer : ModPlayer
         }
     }
 
+    // 创建 BasicBody 实例
     private static BasicBody CreateBasicBodyInstanceByType(Type type)
     {
         try
