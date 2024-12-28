@@ -1,55 +1,73 @@
-﻿namespace SilkyUI.BasicComponents;
+﻿using System.Diagnostics;
+
+namespace SilkyUI.BasicComponents;
 
 public class SUIImage : View
 {
-    public Texture2D Texture { get; set; }
+    #region Texture2D
 
-    public Vector2
-        ImagePosition = new(),
-        ImagePercent = new(),
-        ImageAlign = new(),
-        ImageOrigin = new();
+    public delegate void TextureChangeEventHandler(SUIImage sender, Texture2D newTexture, Texture2D previousTexture);
 
-    public float ImageScale = 1f;
-    public Color ImageColor = Color.White;
-    public bool TickSound = true;
+    private Texture2D _texture;
 
-    public Rectangle? SourceRectangle { get; set; } = null;
+    public Texture2D Texture
+    {
+        get => _texture;
+        set
+        {
+            OnTextureChanged(this, value, _texture);
+            _texture = value;
+        }
+    }
+
+    public event TextureChangeEventHandler TextureChanged;
+
+    protected virtual void OnTextureChanged(SUIImage sender, Texture2D newTexture, Texture2D previousTexture) =>
+        TextureChanged?.Invoke(sender, newTexture, previousTexture);
+
+    #endregion
+
+    public Vector2 ImagePosition = Vector2.Zero;
+    public Vector2 ImagePercent = Vector2.Zero;
+    public Vector2 ImageAlign = Vector2.Zero;
+    public Vector2 ImageOrigin = Vector2.Zero;
+
+    /// <summary>
+    /// 图片缩放
+    /// </summary>
+    public Vector2 ImageScale { get; set; } = Vector2.One;
+
+    /// <summary>
+    /// 图片染色
+    /// </summary>
+    public Color ImageColor { get; set; } = Color.White;
+
+    public Rectangle? SourceRectangle { get; set; }
 
     public SUIImage(Texture2D texture, bool setSizeViaTexture = true)
     {
         Texture = texture;
+        SpecifyWidth = SpecifyHeight = true;
+        
+        UseMenuTickSoundForMouseOver();
 
-        if (setSizeViaTexture && Texture != null)
-        {
-            Width.Pixels = Texture.Width + this.HPadding();
-            Height.Pixels = Texture.Height + this.VPadding();
-        }
-    }
-
-    public override void MouseOver(UIMouseEvent evt)
-    {
-        base.MouseOver(evt);
-
-        if (TickSound)
-            SoundEngine.PlaySound(SoundID.MenuTick);
+        if (!setSizeViaTexture || Texture == null) return;
+        Width.Pixels = Texture.Width + this.HPadding();
+        Height.Pixels = Texture.Height + this.VPadding();
     }
 
     public override void DrawSelf(SpriteBatch sb)
     {
         base.DrawSelf(sb);
+        if (Texture is null) return;
 
-        if (Texture != null)
-        {
-            Vector2 position = GetDimensions().Position();
-            Vector2 size = GetDimensions().Size();
+        var position = GetDimensions().Position();
+        var size = GetDimensions().Size();
 
-            Vector2 imagePosition = position + ImagePosition + size * ImagePercent;
-            imagePosition += (size - Texture.Size()) * ImageAlign;
+        var imagePosition = position + ImagePosition + size * ImagePercent;
+        imagePosition += (size - Texture.Size()) * ImageAlign;
 
-            sb.Draw(Texture, imagePosition, SourceRectangle, ImageColor,
-                0f, Texture.Size() * ImageOrigin, ImageScale, 0f, 0f);
-        }
+        sb.Draw(Texture, imagePosition, SourceRectangle, ImageColor,
+            0f, Texture.Size() * ImageOrigin, ImageScale, 0f, 0f);
     }
-
 }

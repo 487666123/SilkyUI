@@ -78,6 +78,6 @@ public class SUIToggleSwitch : View
         float circleSize = Math.Min(innerSize.X, innerSize.Y);
 
         SDFGraphics.NoBorderRound(innerPos + (innerSize - new Vector2(circleSize)) * SwitchTimer,
-            circleSize, ToggleCircleColor, TransformMatrix);
+            circleSize, ToggleCircleColor, FinalMatrix);
     }
 }

@@ -90,18 +90,40 @@ public static class TextSnippetHelper
         return finalSnippets;
     }
 
+    /// <summary>
+    /// 把 TextSnippet 转换为 PlainSnippet, 因为 PlainSnippet 文字颜色不会闪烁.<br/>
+    /// 不会修改传入的, 请使用返回值.
+    /// </summary>
+    public static List<TextSnippet> ConvertNormalSnippets(List<TextSnippet> originalSnippets,
+        List<TextSnippet> finalSnippets)
+    {
+        finalSnippets.Clear();
+        foreach (var snippet in originalSnippets)
+        {
+            if (snippet.GetType() == typeof(TextSnippet))
+            {
+                finalSnippets.Add(new PlainTagHandler.PlainSnippet(snippet.Text, snippet.Color, snippet.Scale));
+                continue;
+            }
+
+            finalSnippets.Add(snippet);
+        }
+
+        return finalSnippets;
+    }
+
     private static PlainTagHandler.PlainSnippet CreateLineBreakSnippet() => new("\n");
 
     /// <summary>
     /// 针对textSnippet特殊文本的换行
     /// </summary>
     public static TextSnippet[] WordwrapString(
-        List<TextSnippet> originalSnippets, Color textColor, DynamicSpriteFont font,
+        List<TextSnippet> originalSnippets, List<TextSnippet> finalSnippets, Color textColor, DynamicSpriteFont font,
         int maxWidth, out float lastLineLength, int maxCharacterCount = 19, int maxLines = -1)
     {
+        finalSnippets.Clear();
         var lineCount = 1; // 行数
         var currentLineLength = 0f; // 当前行长度
-        List<TextSnippet> finalSnippets = [new()];
 
         foreach (var snippet in originalSnippets)
         {
@@ -206,11 +228,12 @@ public static class TextSnippetHelper
     /// <summary>
     /// 针对 <see cref="TextSnippet"/> 特殊文本的换行
     /// </summary>
-    public static TextSnippet[] WordwrapString(string text, Color textColor, DynamicSpriteFont font, int maxWidth,
+    public static TextSnippet[] WordwrapString(List<TextSnippet> finalSnippets, string text, Color textColor,
+        DynamicSpriteFont font, int maxWidth,
         out float lastLineLength, int maxCharacterCount = 19, int maxLines = -1)
     {
         var originalSnippets = ChatManager.ParseMessage(text, textColor);
-        return WordwrapString(ConvertNormalSnippets(originalSnippets), textColor, font,
+        return WordwrapString(ConvertNormalSnippets(originalSnippets), finalSnippets, textColor, font,
             maxWidth, out lastLineLength, maxCharacterCount, maxLines);
     }
 

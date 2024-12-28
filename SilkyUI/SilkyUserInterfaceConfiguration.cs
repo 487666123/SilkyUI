@@ -10,8 +10,8 @@ public class SilkyUserInterfaceConfiguration
     public SilkyUserInterfaceConfiguration()
     {
         // 正常大小的字体, 使用的地方最多
-        FontYAxisOffset[FontAssets.MouseText.Value] = 5f;
+        FontYAxisOffset[FontAssets.MouseText.Value] = 2.5f;
         // 大概是正常大小字体两倍大, 通常是用于标题的字体
-        FontYAxisOffset[FontAssets.DeathText.Value] = 10f;
+        FontYAxisOffset[FontAssets.DeathText.Value] = 6f;
     }
 }

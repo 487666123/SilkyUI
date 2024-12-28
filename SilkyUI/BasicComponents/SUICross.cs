@@ -33,6 +33,6 @@ public class SUICross(Color backgroundColor, Color borderColor) : View
         var crossPosition = position + (size - new Vector2(CrossSize)) / 2f + CrossOffset;
 
         SDFGraphics.HasBorderCross(crossPosition, CrossSize, CrossRounded,
-            crossBackground, CrossBorder, crossBorderColor, TransformMatrix);
+            crossBackground, CrossBorder, crossBorderColor, FinalMatrix);
     }
 }

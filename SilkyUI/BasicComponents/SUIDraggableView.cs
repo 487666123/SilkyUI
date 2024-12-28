@@ -12,19 +12,12 @@ public class SUIDraggableView : View
 
     public float ShadowThickness;
     public Color ShadowColor;
-
-    /// <summary>
-    /// 可拖动
-    /// </summary>
-    public bool Draggable;
-
-    public bool Dragging;
+    public bool Draggable { get; set; }
+    public bool Dragging { get; protected set; }
     public Vector2 Offset;
-
     public Vector2 DragIncrement = new(5f);
 
-    public SUIDraggableView(Color backgroundColor, Color borderColor, float rounded = 12,
-        bool draggable = false)
+    public SUIDraggableView(Color backgroundColor, Color borderColor, float rounded = 12, bool draggable = false)
     {
         SetPadding(10f);
         Draggable = draggable;
@@ -54,13 +47,11 @@ public class SUIDraggableView : View
         base.LeftMouseDown(evt);
 
         // 当点击的是子元素不进行移动
-        if (Draggable &&
-            (evt.Target == this || evt.Target is View { DragIgnore: true } ||
-             evt.Target.GetType().IsAssignableFrom(typeof(UIElement))))
-        {
-            Offset = evt.MousePosition - new Vector2(Left.Pixels, Top.Pixels);
-            Dragging = true;
-        }
+        if (!Draggable ||
+            (evt.Target != this && evt.Target is not View { DragIgnore: true } &&
+             !evt.Target.GetType().IsAssignableFrom(typeof(UIElement)))) return;
+        Offset = evt.MousePosition - new Vector2(Left.Pixels, Top.Pixels);
+        Dragging = true;
     }
 
     public override void LeftMouseUp(UIMouseEvent evt)
@@ -106,7 +97,7 @@ public class SUIDraggableView : View
         if (Shaded)
         {
             SDFRectangle.Shadow(shadowPosition, shadowSize, Rounded,
-                ShadowColor, ShadowThickness, TransformMatrix);
+                ShadowColor, ShadowThickness, FinalMatrix);
         }
 
         base.DrawSelf(spriteBatch);

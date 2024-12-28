@@ -10,15 +10,15 @@ public enum BoxSizing
 
 public enum Display
 {
-    InlineBlock,
-    InlineFlex,
-    InlineGrid
+    Block,
+    Flexbox,
 }
 
 public enum Position
 {
     Relative,
-    Absolute
+    Absolute,
+    Sticky,
 }
 
 public partial class View : UIElement
@@ -57,7 +57,7 @@ public partial class View : UIElement
     /// </summary>
     public bool IsAbsolute => Position is Position.Absolute;
 
-    public Display Display { get; set; } = Display.InlineFlex;
+    public Display Display { get; set; } = Display.Flexbox;
 
     public AnimationTimer HoverTimer { get; } = new();
 

@@ -3,7 +3,7 @@ using Terraria.UI.Chat;
 
 namespace SilkyUI.BasicElements;
 
-public partial class SUIText : View
+public class SUIText : View
 {
     /// <summary>
     /// 原字符串
@@ -143,7 +143,7 @@ public partial class SUIText : View
     /// <summary>
     /// 最终展示文本
     /// </summary>
-    public TextSnippet[] FinalTextSnippets { get; protected set; }
+    public List<TextSnippet> FinalTextSnippets { get; } = [];
 
     /// <summary>
     /// 最后一次的 inner 宽度
@@ -196,18 +196,22 @@ public partial class SUIText : View
 
             FinalTextSnippets = [.. finalSnippets];
             */
-            FinalTextSnippets = TextSnippetHelper.WordwrapString(LastString, TextColor, Font,
+            TextSnippetHelper.WordwrapString(FinalTextSnippets, LastString, TextColor, Font,
                 (int)(GetInnerDimensions().Width / TextScale), out _, MaxCharacterCount, MaxLines);
         }
         else
         {
-            FinalTextSnippets =
-                [.. TextSnippetHelper.ConvertNormalSnippets(TextSnippetHelper.ParseMessage(LastString, TextColor))];
+            TextSnippetHelper.ConvertNormalSnippets(
+                TextSnippetHelper.ParseMessage(LastString, TextColor), FinalTextSnippets);
         }
 
-        TextSize = ChatManager.GetStringSize(Font, FinalTextSnippets, new Vector2(1f));
+        TextSize = ChatManager.GetStringSize(Font, FinalTextSnippets.ToArray(), new Vector2(1f));
     }
 
+    /// <summary>
+    /// 绘制文字
+    /// </summary>
+    /// <param name="spriteBatch"></param>
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
         base.DrawSelf(spriteBatch);
@@ -234,27 +238,47 @@ public partial class SUIText : View
         SilkyUserInterfaceSystem.Instance.Configuration.FontYAxisOffset.TryGetValue(Font, out var yAxisOffset);
         textPos.Y += TextScale * yAxisOffset;
 
-        DrawColorCodedStringShadow(spriteBatch, Font, FinalTextSnippets,
-            textPos, TextBorderColor, 0f, Vector2.Zero, new Vector2(TextScale), -1f, TextBorder * TextScale);
+        UseMouseText();
+        IsWrapped = true;
+        TextOrKey = "你好世界你好世界123";
+        List<int> removes = [];
+        BgColor = Color.Black * 0.25f;
+        for (var i = 0; i < FinalTextSnippets.Count; i++)
+        {
+            if (FinalTextSnippets[i].Text.Equals("\n"))
+            {
+                removes.Add(i);
+            }
+        }
 
-        DrawColorCodedString(spriteBatch, Font, FinalTextSnippets,
-            textPos, TextColor, 0f, Vector2.Zero, new Vector2(TextScale), out var _, -1f);
+        Console.WriteLine($"Count:{removes.Count}");
+
+        foreach (var snippet in FinalTextSnippets)
+        {
+            Console.WriteLine(snippet.Text);
+        }
+
+        // DrawColorCodedStringShadow(spriteBatch, Font, FinalTextSnippets,
+        //     textPos, TextBorderColor, 0f, Vector2.Zero, new Vector2(TextScale), -1f, TextBorder * TextScale);
+
+        ChatManager.DrawColorCodedString(spriteBatch, Font, FinalTextSnippets.ToArray(),
+            textPos, Color.Red, 0f, Vector2.Zero, new Vector2(TextScale), out var _, -1f);
     }
 
-    public Vector2[] ShadowDirections = [-Vector2.UnitX, Vector2.UnitX, -Vector2.UnitY, Vector2.UnitY];
+    private static readonly Vector2[] ShadowDirections = [-Vector2.UnitX, Vector2.UnitX, -Vector2.UnitY, Vector2.UnitY];
 
-    public void DrawColorCodedStringShadow(SpriteBatch spriteBatch, DynamicSpriteFont font, TextSnippet[] snippets,
+    private static void DrawColorCodedStringShadow(SpriteBatch spriteBatch, DynamicSpriteFont font,
+        List<TextSnippet> snippets,
         Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, float maxWidth = -1f,
         float spread = 2f)
     {
         foreach (var offset in ShadowDirections)
-        {
             DrawColorCodedString(spriteBatch, font, snippets, position + offset * spread, baseColor,
                 rotation, origin, baseScale, out var _, maxWidth, ignoreColors: true);
-        }
     }
 
-    public static Vector2 DrawColorCodedString(SpriteBatch spriteBatch, DynamicSpriteFont font, TextSnippet[] snippets,
+    private static Vector2 DrawColorCodedString(SpriteBatch spriteBatch, DynamicSpriteFont font,
+        List<TextSnippet> snippets,
         Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, out int hoveredSnippet,
         float maxWidth, bool ignoreColors = false)
     {
@@ -268,7 +292,7 @@ public partial class SUIText : View
         var color = baseColor;
         var num3 = 0f;
 
-        for (var i = 0; i < snippets.Length; i++)
+        for (var i = 0; i < snippets.Count; i++)
         {
             var textSnippet = snippets[i];
             textSnippet.Update();

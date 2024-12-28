@@ -11,6 +11,9 @@ public class ExampleUI : BasicBody
 
     public SUIDraggableView MainPanel { get; private set; }
 
+    private static readonly int[] RoshanBadges =
+        [1, 4, 6, 7, 10, 489, 490, 491, 2998, 1, 4, 6, 7, 10, 489, 490, 491, 2998];
+
     public override void OnInitialize()
     {
         var backgroundColor = new Color(63, 65, 151);
@@ -18,7 +21,7 @@ public class ExampleUI : BasicBody
 
         MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
         {
-            Display = Display.InlineFlex,
+            Display = Display.Flexbox,
             FlexDirection = FlexDirection.Column,
             MainAxisAlignment = MainAxisAlignment.Start,
             Shaded = true,
@@ -27,42 +30,44 @@ public class ExampleUI : BasicBody
             Border = 2f,
             Gap = new Vector2(12f)
         }.Join(this);
+        MainPanel.OnUpdate += _ => { ScalingAnimationUsingMatrix(MainPanel, 0f); };
         MainPanel.SetPadding(12f);
 
         var container1 = new View
         {
-            Display = Display.InlineFlex,
-            FlexDirection = FlexDirection.Row,
-            MainAxisAlignment = MainAxisAlignment.Center,
-            CrossAxisAlignment = CrossAxisAlignment.Center,
-            BgColor = Color.Black * 0.25f,
-            Gap = new Vector2(12f)
+            BgColor = Color.Black * 0.25f, // 背景颜色
+            Display = Display.Flexbox, // Flex 布局
+            FlexDirection = FlexDirection.Row, // 主轴方向为: 行 
+            MainAxisAlignment = MainAxisAlignment.Center, // 主轴 自结尾向前排列
+            CrossAxisAlignment = CrossAxisAlignment.Center, // 交叉轴 居中
+            Gap = new Vector2(12f), // 子元素间距
+            Border = 2, // 边框宽度
+            BorderColor = Color.Black * 0.75f, // 边框颜色
+            Rounded = new Vector4(12f, 4f, 4f, 12f), // 圆角
+            OverflowHidden = true,
         }.Join(MainPanel);
         container1.SetWidth(500f);
+        container1.SetPadding(12f); // 内边距
+        container1.OnUpdate += _ => { ScalingAnimationUsingMatrix(container1, 0.1f); };
 
-        var box1 = new SUIText
+        // RoshanBadges = [489, 490, 491, 2998]
+        foreach (var type in RoshanBadges)
         {
-            IsWrapped = true,
-            TextOrKey = GetType().FullName,
-            BgColor = Color.White * 0.5f
-        }.Join(container1);
-        box1.SetSize(100f, 100f);
+            // 加载物品图标
+            Main.instance.LoadItem(type);
+            ;
+            var texture2D = TextureAssets.Item[type].LoadItem().Value;
+            // 创建并添加
+            var img = new SUIImage(texture2D);
+            img.OnUpdate += _ => { ScalingAnimationUsingMatrix(img, 0.1f); };
+            if (type == 1) img.OnLeftMouseDown += (_, _) => IsEnabled = false;
 
-        var box2 = new View
-            { BgColor = Color.White * 0.5f }.Join(container1);
-        box2.SetSize(100f, 50f);
-
-        var box3 = new View
-            { BgColor = Color.White * 0.5f }.Join(container1);
-        box3.SetSize(100f, 20f);
-
-        var box4 = new View
-            { BgColor = Color.White * 0.5f }.Join(container1);
-        box4.SetSize(100f, 100f);
+            container1.ViewAppend(img);
+        }
 
         var container2 = new View
         {
-            Display = Display.InlineFlex,
+            Display = Display.Flexbox,
             FlexDirection = FlexDirection.Row,
             MainAxisAlignment = MainAxisAlignment.SpaceEvenly,
             BgColor = Color.Black * 0.25f,
@@ -87,7 +92,7 @@ public class ExampleUI : BasicBody
 
         var container3 = new View
         {
-            Display = Display.InlineFlex,
+            Display = Display.Flexbox,
             FlexDirection = FlexDirection.Row,
             MainAxisAlignment = MainAxisAlignment.SpaceBetween,
             CrossAxisAlignment = CrossAxisAlignment.End,
@@ -112,21 +117,25 @@ public class ExampleUI : BasicBody
         box12.SetSize(100f, 20f);
     }
 
-    public static void SetMatrixScaleAnimation(View view, float target)
+    public override void Update(GameTime gameTime)
     {
-        if (view == null)
-            return;
+        base.Update(gameTime);
+    }
 
-        var center = view.GetDimensions().Center();
+    public override void Draw(SpriteBatch spriteBatch)
+    {
+        base.Draw(spriteBatch);
+    }
 
-        var beforeTransformCenter = Vector2.Transform(center, view.TransformMatrix);
-
-        var scale = view.HoverTimer.Lerp(1f, 1f + target);
-        view.TransformMatrix *= Matrix.CreateScale(scale, scale, 1f);
-
-        var afterTransformCenter = Vector2.Transform(center, view.TransformMatrix);
-
-        var offset = beforeTransformCenter - afterTransformCenter;
-        view.TransformMatrix *= Matrix.CreateTranslation(offset.X, offset.Y, 0f);
+    /// <summary>
+    /// 使用矩阵缩放动画
+    /// </summary>
+    public static void ScalingAnimationUsingMatrix(View view, float target)
+    {
+        if (view == null) return;
+        var scale = 1f + (target = view.HoverTimer.Lerp(0f, target));
+        view.TransformMatrix = Matrix.CreateScale(scale, scale, 1f);
+        var offset = view.GetDimensions().Center() * target;
+        view.TransformMatrix *= Matrix.CreateTranslation(-offset.X, -offset.Y, 0f);
     }
 }

@@ -4,7 +4,7 @@
 /// 简单说明: 2024.8.26 <br/>
 /// 只有 View 能用, 别的都不建议用. <br/>
 /// 使用固定宽高必须设置 <see cref="SpecifyWidth"/> <see cref="SpecifyHeight"/> 为 true <br/>
-/// 所有 UI 元素都必须基于 <see cref="View"/> <br/>
+/// 使用这套系统所有 UI 元素都必须基于 <see cref="View"/> <br/>
 /// </summary>
 public partial class View
 {
@@ -21,68 +21,162 @@ public partial class View
         OnMiddleMouseUp += (_, _) => MiddleMousePressed = false;
     }
 
-    /// <summary>
-    /// 获取父元素 <see cref="CalculatedStyle"/><br/>
-    /// 绝对定位下与原版相同<br/>
-    /// 相对定位下, 父元素不是 <see cref="View"/> 子类与原版相同<br/>
-    /// 父元素是 <see cref="View"/> 且父元素 <see cref="SpecifyWidth"/> <see cref="SpecifyHeight"/>
-    /// 为 false, 则不使用父元素大小转而设为 0<br/>
-    /// 且会根据父元素 <see cref="FlexDirection"/> 决定 <see cref="CalculatedStyle"/> 的 XY,
-    /// 排列自身位置<br/>
-    /// 位置与 <see cref="UIElementExtensions.PreviousRelativeElement(UIElement)"/> 相关
-    /// </summary>
-    /// <returns></returns>
-    public virtual CalculatedStyle GetParentDimensions()
+    protected virtual Vector2 GetStartingPosition()
     {
-        // 没有父元素
-        if (Parent is null) return SilkyUIHelper.GetBasicBodyDimensions();
+        return Parent is null ? Vector2.Zero : Parent._innerDimensions.Position();
+    }
 
-        // 父元素不是 View 类则直接返回父元素 innerDimensions
-        if (Parent is not View parent) return Parent.GetInnerDimensions();
+    protected virtual Vector2 GetContainerSize()
+    {
+        if (Parent is null)
+            return SilkyUIHelper.GetScreenScaledSize();
 
-        var container = parent.GetInnerDimensions();
+        if (Parent is not View parent)
+            return Parent._innerDimensions.Size();
+
+        var size = parent._innerDimensions.Size();
 
         // 可能是负数, 所以要设为 0
-        if (!parent.SpecifyWidth) container.Width = 0;
-        if (!parent.SpecifyHeight) container.Height = 0;
+        if (!parent.SpecifyWidth) size.X = 0;
+        if (!parent.SpecifyHeight) size.Y = 0;
 
-        return container;
+        return size;
+    }
+
+    protected virtual CalculatedStyle GetContainerBounds()
+    {
+        return new UIBounds(GetStartingPosition(), GetContainerSize()).ToCalculatedStyle();
+    }
+
+    protected bool ParentIsCalculating() => Parent is View { Calculating: false };
+
+    protected bool Calculating { get; set; }
+
+    protected float RelativeLeft;
+    protected float RelativeTop;
+
+    protected float? OuterWidth;
+    protected float? OuterHeight;
+    protected float? InnerWidth;
+    protected float? InnerHeight;
+
+    protected virtual void RecalculateSize()
+    {
+        if (Parent is View parent)
+        {
+            if (SpecifyWidth)
+            {
+                var innerWidth = MathHelper.Clamp(Width.GetValue(parent.InnerWidth ?? 0),
+                    MinWidth.GetValue(parent.InnerWidth ?? 0),
+                    MaxWidth.GetValue(parent.InnerWidth ?? 0));
+
+                InnerWidth = BoxSizing is not BoxSizing.ContentBox
+                    ? MathHelper.Max(0, innerWidth - Border * 2 - this.HPadding())
+                    : innerWidth;
+            }
+
+            if (SpecifyHeight)
+            {
+                var innerHeight = MathHelper.Clamp(Height.GetValue(parent.InnerHeight ?? 0),
+                    MinHeight.GetValue(parent.InnerHeight ?? 0),
+                    MaxHeight.GetValue(parent.InnerHeight ?? 0));
+                InnerHeight = BoxSizing is not BoxSizing.ContentBox
+                    ? MathHelper.Max(0, innerHeight - Border * 2 - this.VPadding())
+                    : innerHeight;
+            }
+        }
+        else
+        {
+            var size = Parent is null
+                ? SilkyUIHelper.GetBasicBodyDimensions().Size()
+                : Parent.GetInnerDimensions().Size();
+
+            InnerWidth = MathHelper.Clamp(Width.GetValue(size.X),
+                MinWidth.GetValue(size.X),
+                MaxWidth.GetValue(size.X));
+
+            InnerHeight = MathHelper.Clamp(Width.GetValue(size.Y),
+                MinWidth.GetValue(size.Y),
+                MaxWidth.GetValue(size.Y));
+        }
+
+        var children = Children.OfType<View>().ToList();
+        children.ForEach(child => child.RecalculateSize());
+
+        OuterWidth = InnerWidth + this.HMargin() + Border * 2 + this.HPadding();
+        OuterHeight = InnerHeight + this.VMargin() + Border * 2 + this.VPadding();
+    }
+
+    protected virtual void RecalculateByTop()
+    {
+        // RecalculateSize();
+    }
+
+    protected virtual void PostRecalculateByTop()
+    {
+        // ApplyLayoutOffset();
     }
 
     public override void Recalculate()
     {
-        var parentDimensions = GetParentDimensions();
+        Calculating = true;
+        try
+        {
+            if (!ParentIsCalculating())
+                RecalculateByTop();
 
-        _outerDimensions = CalculateOuterDimensionsByParentDimensions(parentDimensions);
-        _dimensions = CalculateDimensions(_outerDimensions);
-        _innerDimensions = CalculateInnerDimensions(_dimensions);
+            ClassifyElements();
 
-        RecalculateChildren();
+            var parentDimensions = GetContainerBounds();
+
+            _outerDimensions = CalculateOuterDimensionsByParentDimensions(parentDimensions);
+            _dimensions = CalculateDimensions(_outerDimensions);
+            _innerDimensions = CalculateInnerDimensions(_dimensions);
+
+            RecalculateChildren();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        finally
+        {
+            if (Calculating)
+                PostRecalculateByTop();
+        }
+
+        Calculating = false;
     }
 
-    /// <summary>
-    /// 计算属性，基于父元素尺寸<br/>
-    /// 不使用 <see cref="UIElement.GetDimensionsBasedOnParentDimensions(CalculatedStyle)"/>
-    /// </summary>
-    public virtual CalculatedStyle CalculateOuterDimensionsByParentDimensions(CalculatedStyle parentDimensions)
+    #region CalculateOuterDimensions
+
+    protected float CalculateLeft(float parentLeft, float parentWidth)
     {
-        var left = Left.GetValue(parentDimensions.Width) + parentDimensions.X;
-        var top = Top.GetValue(parentDimensions.Height) + parentDimensions.Y;
+        return Left.GetValue(parentWidth) + parentLeft;
+    }
 
-        var width =
-            SpecifyWidth
-                ? MathHelper.Clamp(Width.GetValue(parentDimensions.Width),
-                    MinWidth.GetValue(parentDimensions.Width),
-                    MaxWidth.GetValue(parentDimensions.Width))
-                : 0;
-        var height =
-            SpecifyHeight
-                ? MathHelper.Clamp(Height.GetValue(parentDimensions.Height),
-                    MinHeight.GetValue(parentDimensions.Height),
-                    MaxHeight.GetValue(parentDimensions.Height))
-                : 0;
+    protected float CalculateTop(float parentTop, float parentHeight)
+    {
+        return Top.GetValue(parentHeight) + parentTop;
+    }
 
-        var result = BoxSizing switch
+    protected float CalculateWidth(float container)
+    {
+        return MathHelper.Clamp(Width.GetValue(container),
+            MinWidth.GetValue(container),
+            MaxWidth.GetValue(container));
+    }
+
+    protected float CalculateHeight(float container)
+    {
+        return MathHelper.Clamp(Height.GetValue(container),
+            MinHeight.GetValue(container),
+            MaxHeight.GetValue(container));
+    }
+
+    protected CalculatedStyle CalculateOuterDimensions(float left, float top, float width, float height)
+    {
+        return BoxSizing switch
         {
             BoxSizing.BorderBox => new CalculatedStyle(
                 left, top,
@@ -94,18 +188,34 @@ public partial class View
                 height + this.VPadding() + this.VMargin() + Border * 2f),
             _ => new CalculatedStyle()
         };
+    }
+
+    #endregion
+
+    /// <summary>
+    /// 计算属性，基于父元素尺寸<br/>
+    /// 不使用 <see cref="UIElement.GetDimensionsBasedOnParentDimensions(CalculatedStyle)"/>
+    /// </summary>
+    public virtual CalculatedStyle CalculateOuterDimensionsByParentDimensions(CalculatedStyle parentDimensions)
+    {
+        var left = CalculateLeft(parentDimensions.X, parentDimensions.Width);
+        var top = CalculateTop(parentDimensions.Y, parentDimensions.Height);
+        var width = SpecifyWidth ? CalculateWidth(parentDimensions.Width) : 0;
+        var height = SpecifyHeight ? CalculateHeight(parentDimensions.Height) : 0;
+
+        var outerDimensions = CalculateOuterDimensions(left, top, width, height);
 
         if (IsAbsolute)
         {
-            result.X += (parentDimensions.Width - result.Width) * HAlign;
-            result.Y += (parentDimensions.Height - result.Height) * VAlign;
+            outerDimensions.X += (parentDimensions.Width - outerDimensions.Width) * HAlign;
+            outerDimensions.Y += (parentDimensions.Height - outerDimensions.Height) * VAlign;
         }
         else if (IsRelative && Parent is View view)
         {
             if (view.SpecifyWidth)
-                result.X += (parentDimensions.Width - result.Width) * HAlign;
+                outerDimensions.X += (parentDimensions.Width - outerDimensions.Width) * HAlign;
             if (view.SpecifyHeight)
-                result.Y += (parentDimensions.Height - result.Height) * VAlign;
+                outerDimensions.Y += (parentDimensions.Height - outerDimensions.Height) * VAlign;
         }
 
         // if (IsRelativePosition && Parent is View { Display: Display.InlineBlock } parent)
@@ -131,7 +241,7 @@ public partial class View
         //     }
         // }
 
-        return result;
+        return outerDimensions;
     }
 
     #region CalculateDimensions
@@ -163,37 +273,35 @@ public partial class View
     /// </summary>
     public override void RecalculateChildren()
     {
-        // 计算子元素前先分类
-        ClassifyElements();
-
         FlowElements.ForEach(element => element.Recalculate());
 
-        if (Display is Display.InlineFlex)
+        if (Display is Display.Flexbox)
             CalculateFlexLayout();
 
-        if (Parent is View parent)
-        {
-            var start = _innerDimensions.Position();
-            var end = FlowElements.Aggregate(start,
-                (current, element) => Vector2.Max(current, element.GetOuterDimensions().RightBottom()));
-
-            var content = end - start;
-
-            if (content is { X: > 0 } or { Y: > 0 })
-            {
-                SecondRecalculate(parent, content);
-            }
-        }
+        if (Parent is View parent && (!SpecifyWidth || !SpecifyHeight))
+            AgainRecalculate(parent);
 
         // 绝对定位
         AbsoluteElements.ForEach(element => element.Recalculate());
     }
 
+    protected bool CalculateContentSize(out Vector2 content)
+    {
+        var start = _innerDimensions.Position();
+        var end = FlowElements.Aggregate(start,
+            (current, element) => Vector2.Max(current, element.GetOuterDimensions().RightBottom()));
+
+        content = end - start;
+        return content is { X: > 0 } or { Y: > 0 };
+    }
+
     /// <summary>
     /// 计算位置与偏移
     /// </summary>
-    public virtual void SecondRecalculate(View parent, Vector2 content)
+    protected virtual void AgainRecalculate(View parent)
     {
+        if (!CalculateContentSize(out var content)) return;
+
         var offset = new Vector2();
 
         // 宽度: auto
@@ -227,10 +335,94 @@ public partial class View
     }
 
     /// <summary>
-    /// 判断点是否在元素内, 会计算<see cref="TransformMatrix"/>
+    /// 修正偏移
+    /// </summary>
+    protected Vector2 LayoutOffset;
+
+    protected void ApplyLayoutOffset()
+    {
+        _outerDimensions.X += LayoutOffset.X;
+        _outerDimensions.Y += LayoutOffset.Y;
+
+        _dimensions.X += LayoutOffset.X;
+        _dimensions.Y += LayoutOffset.Y;
+
+        _innerDimensions.X += LayoutOffset.X;
+        _innerDimensions.Y += LayoutOffset.Y;
+
+        foreach (var child in Children.OfType<View>())
+        {
+            child.LayoutOffset += LayoutOffset;
+            child.ApplyLayoutOffset();
+        }
+
+        LayoutOffset = Vector2.Zero;
+    }
+
+    public virtual UIElement GetElementAtFromView(Vector2 point)
+    {
+        var children =
+            Elements.OfType<View>()
+                .Where(el => !el.IgnoresMouseInteraction).Reverse().ToArray();
+
+        if (OverflowHidden && !ContainsPoint(point)) return null;
+
+        foreach (var child in children)
+        {
+            var target = child.GetElementAt(point);
+            if (target is not null)
+                return target;
+        }
+
+        if (IgnoresMouseInteraction)
+            return null;
+
+        return ContainsPoint(point) ? this : null;
+
+        // for (var index = Elements.Count - 1; index >= 0; --index)
+        // {
+        //     var element = Elements[index];
+        //     if (element.IgnoresMouseInteraction || !element.ContainsPoint(point)) continue;
+        //     target = element;
+        //     break;
+        // }
+        //
+        // if (target != null)
+        //     return target.GetElementAt(point);
+        // if (IgnoresMouseInteraction)
+        //     return null;
+        // return ContainsPoint(point) ? this : null;
+    }
+
+    /// <summary>
+    /// 判断点是否在元素内, 会计算<see cref="FinalMatrix"/>
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
     public override bool ContainsPoint(Vector2 point) =>
-        base.ContainsPoint(Vector2.Transform(point, Matrix.Invert(TransformMatrix)));
+        base.ContainsPoint(Vector2.Transform(point, Matrix.Invert(FinalMatrix)));
+
+    public SoundStyle? MouseOverSound { get; set; }
+    public void UseMenuTickSoundForMouseOver() => MouseOverSound = SoundID.MenuTick;
+
+    public override void MouseOver(UIMouseEvent evt)
+    {
+        if (MouseOverSound is not null)
+            SoundEngine.PlaySound(MouseOverSound);
+        base.MouseOver(evt);
+    }
+
+    public delegate bool OnAppendEventHandler(View parent, View child);
+
+    public event OnAppendEventHandler OnViewAppend;
+
+    public virtual View ViewAppend(View child)
+    {
+        OnViewAppend?.Invoke(this, child);
+        child.Remove();
+        child.Parent = this;
+        Elements.Add(child);
+        child.Recalculate();
+        return this;
+    }
 }

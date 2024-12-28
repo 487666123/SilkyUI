@@ -1,29 +1,31 @@
-﻿namespace SilkyUI.BasicElements;
+﻿using SilkyUI.BasicComponents;
+
+namespace SilkyUI.BasicElements;
 
 public partial class View
 {
-    public event Action<View> OnUpdateTransformMatrix;
-
     /// <summary>
     /// 绘制自己
     /// </summary>
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
-        RoundedRectangle.Draw(GetDimensions().Position(), GetDimensions().Size(), FinallyDrawBorder, TransformMatrix);
+        RoundedRectangle.Draw(GetDimensions().Position(), GetDimensions().Size(), FinallyDrawBorder, FinalMatrix);
         base.DrawSelf(spriteBatch);
     }
 
-    /// <summary>
-    /// 更新变换矩阵
-    /// </summary>
-    protected virtual void UpdateTransformMatrix()
+    protected void UpdateMatrix()
     {
-        if (this.RecentParentView() is { } parent)
-            TransformMatrix = parent.TransformMatrix;
-        else
-            TransformMatrix = Main.UIScaleMatrix;
-
-        OnUpdateTransformMatrix?.Invoke(this);
+        try
+        {
+            var original =
+                this.RecentParentView() is { } parent ? parent.FinalMatrix : Main.UIScaleMatrix;
+            FinalMatrix = TransformMatrix * original;
+            foreach (var view in Elements.OfType<View>()) view.UpdateMatrix();
+        }
+        finally
+        {
+            TransformMatrixHasChanges = false;
+        }
     }
 
     /// <summary>
@@ -31,10 +33,11 @@ public partial class View
     /// </summary>
     public override void Draw(SpriteBatch spriteBatch)
     {
-        UpdateTransformMatrix();
         UpdateAnimationTimer();
+        if (TransformMatrixHasChanges)
+            UpdateMatrix();
 
-        if (TransformMatrix == Matrix.Identity)
+        if (FinalMatrix == Matrix.Identity)
         {
             OriginalDraw(spriteBatch);
             return;
@@ -42,13 +45,33 @@ public partial class View
 
         spriteBatch.End();
         spriteBatch.Begin(SpriteSortMode.Deferred,
-            null, null, null, null, null, TransformMatrix);
+            null, null, null, OverflowHiddenRasterizerState, null, FinalMatrix);
 
         OriginalDraw(spriteBatch);
 
         spriteBatch.End();
         spriteBatch.Begin(SpriteSortMode.Deferred,
-            null, null, null, null, null, TransformMatrix);
+            null, null, null, OverflowHiddenRasterizerState, null, FinalMatrix);
+    }
+
+    public Rectangle GetClippingRectangleFromView(SpriteBatch spriteBatch)
+    {
+        var topLeft = Vector2.Transform(_innerDimensions.Position(), FinalMatrix);
+        var rightBottom = Vector2.Transform(_innerDimensions.RightBottom(), FinalMatrix);
+        var rectangle =
+            new Rectangle(
+                (int)Math.Floor(topLeft.X), (int)Math.Floor(topLeft.Y),
+                (int)Math.Ceiling(rightBottom.X - topLeft.X),
+                (int)Math.Ceiling(rightBottom.Y - topLeft.Y));
+        var scissorRectangle = spriteBatch.GraphicsDevice.ScissorRectangle;
+        // rectangle = Rectangle.Intersect(rectangle, scissorRectangle);
+        // var max1 = (int)Math.Ceiling(Main.screenWidth * Main.UIScale);
+        // var max2 = (int)Math.Ceiling(Main.screenHeight * Main.UIScale);
+        // rectangle.X = Utils.Clamp(rectangle.X, 0, max1);
+        // rectangle.Y = Utils.Clamp(rectangle.Y, 0, max2);
+        // rectangle.Width = Utils.Clamp(rectangle.Width, 0, max1 - rectangle.X);
+        // rectangle.Height = Utils.Clamp(rectangle.Height, 0, max2 - rectangle.Y);
+        return Rectangle.Intersect(rectangle, scissorRectangle);
     }
 
     /// <summary>
@@ -58,36 +81,38 @@ public partial class View
     {
         var overflowHidden = OverflowHidden;
         var useImmediateMode = UseImmediateMode;
-        var scissorRectangle = spriteBatch.GraphicsDevice.ScissorRectangle;
+
         var anisotropicClamp = SamplerState.AnisotropicClamp;
         if (useImmediateMode || OverrideSamplerState != null)
         {
             spriteBatch.End();
             spriteBatch.Begin(useImmediateMode ? SpriteSortMode.Immediate : SpriteSortMode.Deferred,
                 BlendState.AlphaBlend, OverrideSamplerState ?? anisotropicClamp, DepthStencilState.None,
-                OverflowHiddenRasterizerState, null, TransformMatrix);
+                OverflowHiddenRasterizerState, null, FinalMatrix);
             DrawSelf(spriteBatch);
             spriteBatch.End();
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, anisotropicClamp, DepthStencilState.None,
-                OverflowHiddenRasterizerState, null, TransformMatrix);
+                OverflowHiddenRasterizerState, null, FinalMatrix);
         }
         else
         {
             DrawSelf(spriteBatch);
         }
 
+        var scissorRectangle = spriteBatch.GraphicsDevice.ScissorRectangle;
         if (overflowHidden)
         {
             spriteBatch.End();
-            var scissorRectangle2 = Rectangle.Intersect(GetClippingRectangle(spriteBatch),
+            var scissorRectangle2 = Rectangle.Intersect(GetClippingRectangleFromView(spriteBatch),
                 spriteBatch.GraphicsDevice.ScissorRectangle);
             spriteBatch.GraphicsDevice.ScissorRectangle = scissorRectangle2;
             spriteBatch.GraphicsDevice.RasterizerState = OverflowHiddenRasterizerState;
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, anisotropicClamp, DepthStencilState.None,
-                OverflowHiddenRasterizerState, null, TransformMatrix);
+                OverflowHiddenRasterizerState, null, FinalMatrix);
         }
 
         DrawChildren(spriteBatch);
+
         if (overflowHidden)
         {
             var rasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
@@ -95,14 +120,14 @@ public partial class View
             spriteBatch.GraphicsDevice.ScissorRectangle = scissorRectangle;
             spriteBatch.GraphicsDevice.RasterizerState = rasterizerState;
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, anisotropicClamp, DepthStencilState.None,
-                rasterizerState, null, TransformMatrix);
+                rasterizerState, null, FinalMatrix);
         }
 
-        if (!FinallyDrawBorder || !(Border > 0f) || BorderColor == Color.Transparent) return;
+        if (!FinallyDrawBorder || Border <= 0f || BorderColor == Color.Transparent) return;
         var position = GetDimensions().Position();
         var size = GetDimensions().Size();
 
-        RoundedRectangle.DrawBorder(position, size, TransformMatrix);
+        RoundedRectangle.DrawBorder(position, size, FinalMatrix);
     }
 
     /// <summary>

@@ -238,7 +238,7 @@ public class SUIScrollbar2 : View
         {
             Color barBgColor = IsMouseOverScrollbar() || _isScrollbarDragging ? BarHoverColor : BarColor;
             SDFRectangle.NoBorder(barPos, barSize,
-                new Vector4(Math.Min(barSize.X, barSize.Y) / 2f), barBgColor, TransformMatrix);
+                new Vector4(Math.Min(barSize.X, barSize.Y) / 2f), barBgColor, FinalMatrix);
         }
     }
 }

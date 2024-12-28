@@ -128,9 +128,9 @@ public static class UIElementExtensions
 
     #endregion
 
-    public static T Join<T>(this T uie, UIElement parent) where T : UIElement
+    public static T Join<T>(this T uie, View parent) where T : View
     {
-        parent.Append(uie);
+        parent.ViewAppend(uie);
         return uie;
     }
 

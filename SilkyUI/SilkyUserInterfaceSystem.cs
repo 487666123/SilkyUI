@@ -11,8 +11,6 @@ public class SilkyUserInterfaceSystem
 
     public readonly SilkyUserInterfaceConfiguration Configuration = new();
 
-    // public readonly RenderTargetPool RenderTargetPool = new();
-
     private bool _initialized;
 
     /// <summary>

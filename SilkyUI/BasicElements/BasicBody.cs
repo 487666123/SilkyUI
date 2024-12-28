@@ -51,19 +51,31 @@ public abstract class BasicBody : View
         Recalculate();
     }
 
-    /*public virtual bool RenderTarget2DDraw => false;
-    public virtual float RenderTarget2DOpacity => 1f;
-    public virtual Vector2 RenderTarget2DScale => Vector2.One;
-    public virtual Vector2 RenderTarget2DPosition => Vector2.Zero;
-    public virtual Vector2 RenderTarget2DOrigin => Vector2.Zero;*/
+    public virtual bool UseRenderTarget { get; set; } = true;
+
+    public virtual float Opacity
+    {
+        get => 0.75f;
+        set { }
+    }
+
+    protected float LastUIScale { get; set; } = Main.UIScale;
 
     public override void Draw(SpriteBatch spriteBatch)
     {
-        base.Draw(spriteBatch);
-        /*var rt2dPool = SilkyUserInterfaceSystem.Instance.RenderTargetPool;
+        if (Math.Abs(LastUIScale - Main.UIScale) > float.Epsilon)
+        {
+            UpdateMatrix();
+            LastUIScale = Main.UIScale;
+        }
+
+        // base.Draw(spriteBatch);
+        // return;
+
+        var rt2dPool = RenderTargetPool.Instance;
         var device = Main.graphics.GraphicsDevice;
 
-        if (RenderTarget2DDraw)
+        if (UseRenderTarget)
         {
             var originalRT2Ds = device.GetRenderTargets();
 
@@ -93,11 +105,9 @@ public abstract class BasicBody : View
             spriteBatch.End();
             device.SetRenderTargets(originalRT2Ds);
 
-            // 使用默认矩阵，因为图像已经是根据 UIZoom 矩阵 绘制的了。
             spriteBatch.Begin();
-            spriteBatch.Draw(rt2d, RenderTarget2DPosition * Main.UIScale, null,
-                Color.White * RenderTarget2DOpacity, 0f, RenderTarget2DOrigin * Main.UIScale, RenderTarget2DScale, 0,
-                0);
+            spriteBatch.Draw(rt2d, Vector2.Zero, null,
+                Color.White * Opacity, 0f, Vector2.Zero, Vector2.One, 0, 0);
 
             device.PresentationParameters.RenderTargetUsage = lastRenderTargetUsage;
 
@@ -106,6 +116,6 @@ public abstract class BasicBody : View
         else
         {
             base.Draw(spriteBatch);
-        }*/
+        }
     }
 }

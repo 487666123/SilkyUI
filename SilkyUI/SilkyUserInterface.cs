@@ -113,18 +113,11 @@ public class MouseTarget
 public class SilkyUserInterface
 {
     public static SilkyUserInterfaceManager Manager => SilkyUserInterfaceManager.Instance;
-
     public Matrix TransformMatrix;
-
-    /// <summary>
-    /// 操控主体
-    /// </summary>
     public BasicBody BasicBody { get; private set; }
-
     public Vector2 MousePosition { get; private set; }
     public UIElement CurrentHoverTarget { get; private set; }
     public UIElement LastHoverTarget { get; private set; }
-
     public MouseTarget LastMouseTargets { get; } = new();
 
     private readonly MouseStatusMinor _mouseStatus = new();
