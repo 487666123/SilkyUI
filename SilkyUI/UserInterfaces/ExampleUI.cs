@@ -28,7 +28,8 @@ public class ExampleUI : BasicBody
             ShadowThickness = 50f,
             ShadowColor = borderColor * 0.2f,
             Border = 2f,
-            Gap = new Vector2(12f)
+            Gap = new Vector2(12f),
+            BgColor = Color.Transparent,
         }.Join(this);
         MainPanel.OnUpdate += _ => { ScalingAnimationUsingMatrix(MainPanel, 0f); };
         MainPanel.SetPadding(12f);
@@ -55,7 +56,6 @@ public class ExampleUI : BasicBody
         {
             // 加载物品图标
             Main.instance.LoadItem(type);
-            ;
             var texture2D = TextureAssets.Item[type].LoadItem().Value;
             // 创建并添加
             var img = new SUIImage(texture2D);
@@ -124,6 +124,9 @@ public class ExampleUI : BasicBody
 
     public override void Draw(SpriteBatch spriteBatch)
     {
+        MainPanel.HoverTimer.Speed = 10f;
+        Opacity = MainPanel.HoverTimer.Lerp(0.5f, 1f);
+        ScalingAnimationUsingMatrix(MainPanel, 0.1f);
         base.Draw(spriteBatch);
     }
 

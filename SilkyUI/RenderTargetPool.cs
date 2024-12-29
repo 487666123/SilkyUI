@@ -1,61 +1,58 @@
 ﻿namespace SilkyUI;
 
-public class RenderTargetPool
+public class RenderTargetPool : IDisposable
 {
+    public static RenderTargetPool Instance => LazyInstance.Value;
     private static readonly Lazy<RenderTargetPool> LazyInstance = new(() => new RenderTargetPool());
 
-    public static RenderTargetPool Instance => LazyInstance.Value;
+    private RenderTargetPool()
+    {
+    }
 
-    private RenderTargetPool() { }
+    private readonly GraphicsDevice _graphicsDevice = Main.graphics.GraphicsDevice;
 
-    /// <summary>
-    /// 缓存
-    /// </summary>
-    private readonly Dictionary<(int, int), Stack<RenderTarget2D>> _cached = [];
+    /// <summary> 可用的 </summary>
+    private readonly Dictionary<(int, int), Stack<RenderTarget2D>> _available = [];
 
-    /// <summary>
-    /// 被占用
-    /// </summary>
+    /// <summary> 被占用 </summary>
     private readonly Dictionary<(int, int), Stack<RenderTarget2D>> _occupied = [];
 
-    /// <summary>
-    /// 借出 RenderTarget2D (需归还)
-    /// </summary>
+    /// <summary> 获取 RenderTarget2D (使用结束后需返还) </summary>
+    public RenderTarget2D Get(int width, int height) => Get((width, height));
+
+    /// <summary> 获取 RenderTarget2D (使用结束后需返还) </summary>
     /// <param name="width">宽度</param>
     /// <param name="height">高度</param>
-    /// <returns>(需归还)</returns>
-    public RenderTarget2D Borrow(int width, int height)
+    public RenderTarget2D Get((int width, int height) size)
     {
-        // 必须要有大小
-        if (width <= 0 || height <= 0)
+        if (size.width <= 0 || size.height <= 0) throw new Exception("width or height must be greater than 0");
+
+        #region 检查有无对应对象池 无则创建
+
+        if (!_available.TryGetValue(size, out var available))
         {
-            throw new Exception("width 和 height 都必须大于 0");
+            available = new Stack<RenderTarget2D>();
+            _available[size] = available;
         }
 
-        var size = (width, height);
-
-        #region 检查有没有对应池子，没有则创建
-        if (!_cached.ContainsKey(size))
+        if (!_occupied.TryGetValue(size, out var occupied))
         {
-            _cached.Add(size, new Stack<RenderTarget2D>());
+            occupied = new Stack<RenderTarget2D>();
+            _occupied[size] = occupied;
         }
 
-        if (!_occupied.ContainsKey(size))
-        {
-            _occupied.Add(size, new Stack<RenderTarget2D>());
-        }
         #endregion
 
-        if (_cached[size].Count > 0)
+        if (available.Count > 0)
         {
-            _cached[size].TryPop(out var renderTarget2D);
-            _occupied[size].Push(renderTarget2D);
+            available.TryPop(out var renderTarget2D);
+            occupied.Push(renderTarget2D);
             return renderTarget2D;
         }
         else
         {
-            var renderTarget2D = Create(width, height);
-            _occupied[size].Push(renderTarget2D);
+            var renderTarget2D = CreateObjectBySize(size.width, size.height);
+            occupied.Push(renderTarget2D);
             return renderTarget2D;
         }
     }
@@ -66,33 +63,27 @@ public class RenderTargetPool
     /// <param name="rt2d">要归还的 RenderTarget2D</param>
     public void Return(RenderTarget2D rt2d)
     {
-        (int width, int height) size = (rt2d.Width, rt2d.Height);
+        var size = (rt2d.Width, rt2d.Height);
 
-        if (!_cached.ContainsKey(size) || !_occupied.ContainsKey(size) || !_occupied[size].Contains(rt2d))
+        if (!_available.TryGetValue(size, out var available) ||
+            !_occupied.TryGetValue(size, out var occupied) || !occupied.Contains(rt2d))
         {
-            throw new Exception("不属于此池");
+            throw new Exception("对象不属于此处...");
         }
 
-        _occupied[size].TryPop(out var _);
-        _cached[size].Push(rt2d);
+        occupied.TryPop(out _);
+        available.Push(rt2d);
     }
 
     public void Dispose()
     {
-        foreach ((_, Stack<RenderTarget2D> value) in _occupied)
-        {
-            if (value is null)
-                continue;
-            foreach (var renderTarget2D in value)
-            {
-                renderTarget2D?.Dispose();
-            }
-        }
+        foreach (var (_, value) in _occupied)
+            if (value?.Count > 0)
+                throw new Exception("Please ensure that all uses are completed before Dispose");
 
-        foreach ((_, Stack<RenderTarget2D> value) in _cached)
+        foreach (var (_, value) in _available)
         {
-            if (value is null)
-                continue;
+            if (value is null) continue;
             foreach (var renderTarget2D in value)
             {
                 renderTarget2D?.Dispose();
@@ -105,12 +96,12 @@ public class RenderTargetPool
     /// </summary>
     /// <param name="width">宽度</param>
     /// <param name="height">高度</param>
-    /// <returns>创建的对象</returns>
-    public static RenderTarget2D Create(int width, int height)
+    /// <returns>object</returns>
+    private RenderTarget2D CreateObjectBySize(int width, int height)
     {
         // Usage 设置为 PreserveContents 在每次替换的时候可以不清除内容
-        return new RenderTarget2D(Main.graphics.GraphicsDevice, width, height,
-                false, Main.graphics.GraphicsDevice.PresentationParameters.BackBufferFormat,
-                DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+        return new RenderTarget2D(_graphicsDevice, width, height,
+            false, _graphicsDevice.PresentationParameters.BackBufferFormat,
+            DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
     }
 }

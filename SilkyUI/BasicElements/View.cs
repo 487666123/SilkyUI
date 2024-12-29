@@ -43,9 +43,9 @@ public partial class View
         return size;
     }
 
-    protected virtual CalculatedStyle GetContainerBounds()
+    protected virtual UIBounds GetContainerBounds()
     {
-        return new UIBounds(GetStartingPosition(), GetContainerSize()).ToCalculatedStyle();
+        return new UIBounds(GetStartingPosition(), GetContainerSize());
     }
 
     protected bool ParentIsCalculating() => Parent is View { Calculating: false };
@@ -127,7 +127,7 @@ public partial class View
 
             ClassifyElements();
 
-            var parentDimensions = GetContainerBounds();
+            var parentDimensions = GetContainerBounds().ToCalculatedStyle();
 
             _outerDimensions = CalculateOuterDimensionsByParentDimensions(parentDimensions);
             _dimensions = CalculateDimensions(_outerDimensions);
