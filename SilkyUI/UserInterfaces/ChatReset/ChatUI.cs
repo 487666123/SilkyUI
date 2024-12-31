@@ -7,7 +7,7 @@ namespace SilkyUI.UserInterfaces.ChatReset;
 public class ChatUI : BasicBody
 {
     public SUIDraggableView MainPanel { get; private set; }
-    public View ChatContainer { get; private set; }
+    public SUIScrollView ChatContainer { get; private set; }
     public View InputContainer { get; private set; }
 
     public override void OnInitialize()
@@ -36,21 +36,17 @@ public class ChatUI : BasicBody
         MainPanel.VAlign = 1f;
         MainPanel.SetPadding(-1f);
 
-        ChatContainer = new View
+        ChatContainer = new SUIScrollView(ScrollDirection.Vertical)
         {
-            Display = Display.Flexbox,
-            FlexDirection = FlexDirection.Column,
-            Gap = new Vector2(12f),
             CornerRadius = new Vector4(10f, 10f, 0f, 0f),
             BgColor = Color.White * 0.25f,
-            OverflowHidden = true,
         }.Join(MainPanel);
-        ChatContainer.SetPadding(12f);
+        ChatContainer.SetPadding(8f);
         ChatContainer.SetSize(0, 260f, 1f);
 
-        for (var i = 0; i < 2; i++)
+        for (var i = 0; i < 10; i++)
         {
-            new SUIMessageItem(i == 1).Join(ChatContainer);
+            new SUIMessageItem((i + 1) % 2 == 0).Join(ChatContainer.ListView);
         }
 
         // 分界线
@@ -107,10 +103,10 @@ public class ChatUI : BasicBody
     {
         MainPanel.HoverTimer.Speed = 15f;
         Opacity = MainPanel.HoverTimer.Lerp(0f, 1f);
-        
+
         var offset = MainPanel.HoverTimer.Lerp(20f, 0f);
         MainPanel.TransformMatrix = Matrix.CreateTranslation(0, offset, 0f);
-        
+
         base.Draw(spriteBatch);
     }
 }

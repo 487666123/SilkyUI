@@ -91,31 +91,24 @@ public class SUIScrollView : View
     /// </summary>
     public bool ScrollbarPermanent;
 
-    /// <summary>
-    /// 蒙版
-    /// </summary>
     public View MaskView { get; } = new();
 
-    /// <summary>
-    /// 列表
-    /// </summary>
     public View ListView { get; } = new();
 
-    /// <summary>
-    /// 滚动条
-    /// </summary>
     public SUIScrollbar ScrollBar { get; } = new();
 
-    /// <param name="scrollDirection">滚动朝向</param>
-    /// <param name="fixedSizeMode">固定大小</param>
     public SUIScrollView(ScrollDirection scrollDirection, bool fixedSizeMode = true)
     {
         #region Mask ListView 蒙版 列表
 
+        Display = Display.Flexbox;
+        FlexDirection = FlexDirection.Row;
+        Gap = new Vector2(8f);
+
         ScrollDirection = scrollDirection;
         FixedSizeMode = fixedSizeMode;
 
-        // MaskView.BgColor = Color.White * 0.5f;
+        // MaskView.BgColor = Color.Red * 0.25f;
         MaskView.OverflowHidden = true;
         MaskView.SetSize(0, 0, 1f, 1f);
         MaskView.Join(this);
@@ -130,6 +123,9 @@ public class SUIScrollView : View
             case ScrollDirection.Vertical:
                 ListView.Width.Percent = 1f;
                 ListView.SpecifyHeight = false;
+                ListView.Display = Display.Flexbox;
+                ListView.FlexDirection = FlexDirection.Column;
+                ListView.Gap = new Vector2(12f);
                 break;
         }
 
@@ -140,8 +136,11 @@ public class SUIScrollView : View
 
         #region Scrollbar 滚动条
 
-        ScrollBar.BgColor = Color.Transparent;
-        ScrollBar.BorderColor = Color.Transparent;
+        ScrollBar.Join(this);
+        ScrollBar.CornerRadius = new Vector4(4f);
+        ScrollBar.BgColor = Color.Black * 0.25f;
+        ScrollBar.Position = Position.Absolute;
+        ScrollBar.HAlign = 1f;
 
         switch (ScrollDirection)
         {
@@ -163,14 +162,12 @@ public class SUIScrollView : View
                 ScrollBar.OnUpdate += _ =>
                 {
                     var maskSize = new Vector2(1f, MaskView.GetInnerDimensions().Height);
-                    var targetSize = new Vector2(1f, ListView.Children.Any() ? ListView.Height.Pixels : 0);
+                    var targetSize = new Vector2(1f, ListView._dimensions.Height);
 
                     ScrollBar.SetSizeForMaskAndTarget(maskSize, targetSize);
                 };
                 break;
         }
-
-        ScrollBar.Join(this);
 
         #endregion
     }
@@ -202,6 +199,7 @@ public class SUIScrollView : View
             default:
             case ScrollDirection.Horizontal:
                 // 滚动条位置对准
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (ListView.Left.Pixels != -ScrollBar.CurrentScrollPosition.X)
                 {
                     ListView.Left.Pixels = -ScrollBar.CurrentScrollPosition.X;
@@ -211,6 +209,7 @@ public class SUIScrollView : View
                 break;
             case ScrollDirection.Vertical:
                 // 滚动条位置对准
+                // ReSharper disable once CompareOfFloatsByEqualityOperator
                 if (ListView.Top.Pixels != -ScrollBar.CurrentScrollPosition.Y)
                 {
                     ListView.Top.Pixels = -ScrollBar.CurrentScrollPosition.Y;
@@ -229,9 +228,9 @@ public class SUIScrollView : View
                     // 设置正确的 蒙版 高度
                     if (ScrollBar.IsBeUsableH)
                     {
-                        if (MaskView.Height.Pixels != -(ScrollBar.Height.Pixels + ScrollBar.Spacing.Y))
+                        if (MaskView.Height.Pixels != -(ScrollBar.Height.Pixels + Gap.Y))
                         {
-                            MaskView.Height.Pixels = -ScrollBar.Height.Pixels - ScrollBar.Spacing.Y;
+                            MaskView.Height.Pixels = -ScrollBar.Height.Pixels - Gap.Y;
                             recalculate = true;
                         }
                     }
@@ -246,12 +245,12 @@ public class SUIScrollView : View
                     // 设置正确的 蒙版 宽度
                     if (ScrollBar.IsBeUsableV)
                     {
-                        if (MaskView.Width.Pixels != -(ScrollBar.Width.Pixels + ScrollBar.Spacing.X))
+                        if (MaskView.Width.Pixels != -(ScrollBar.Width.Pixels + Gap.X))
                         {
                             _widthTimer.StartForwardUpdate();
 
                             MaskView.Width.Pixels =
-                                _widthTimer.Lerp(0, -(ScrollBar.Width.Pixels + ScrollBar.Spacing.X));
+                                _widthTimer.Lerp(0, -(ScrollBar.Width.Pixels + Gap.X));
                             recalculate = true;
                         }
                     }
@@ -260,7 +259,7 @@ public class SUIScrollView : View
                         _widthTimer.StartReverseUpdate();
 
                         MaskView.Width.Pixels =
-                            _widthTimer.Lerp(0, -(ScrollBar.Width.Pixels + ScrollBar.Spacing.X));
+                            _widthTimer.Lerp(0, -(ScrollBar.Width.Pixels + Gap.X));
                         recalculate = true;
                     }
 

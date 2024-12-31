@@ -6,6 +6,9 @@ public class SUIScrollbar : View
 {
     #region Basic Fields
 
+    /// <summary>
+    /// 滚动条当前位置
+    /// </summary>
     public virtual Vector2 CurrentScrollPosition
     {
         get => Vector2.Clamp(_currentScrollPosition, Vector2.Zero, GetScrollRange());
@@ -16,6 +19,9 @@ public class SUIScrollbar : View
 
     public float ScrollMultiplier = 1f;
 
+    /// <summary>
+    /// 滚动条目标位置
+    /// </summary>
     public Vector2 TargetScrollPosition
     {
         get => Vector2.Clamp(_targetScrollPosition, Vector2.Zero, GetScrollRange());
@@ -51,7 +57,7 @@ public class SUIScrollbar : View
         set => _scrollableContentSize = Vector2.Max(Vector2.One, value);
     }
 
-    public Vector2 _scrollableContentSize = Vector2.One;
+    private Vector2 _scrollableContentSize = Vector2.One;
 
     public bool AutomaticallyDisabled = true;
 
@@ -125,9 +131,9 @@ public class SUIScrollbar : View
 
     public bool IsMouseOverScrollbar()
     {
-        Vector2 focus = Main.MouseScreen;
-        Vector2 barPos = GetBarScreenPosition();
-        Vector2 barSize = GetBarSize();
+        var focus = Main.MouseScreen;
+        var barPos = GetBarScreenPosition();
+        var barSize = GetBarSize();
 
         return focus.X > barPos.X && focus.Y > barPos.Y && focus.X < barPos.X + barSize.X &&
                focus.Y < barPos.Y + barSize.Y;
@@ -137,11 +143,11 @@ public class SUIScrollbar : View
 
     #region private static Fields
 
-    protected readonly AnimationTimer ShrinkTimer = new(5f, 20f);
+    protected readonly AnimationTimer ShrinkTimer = new(10f);
     protected bool IsScrollbarDragging; // 滚动条拖动中
     protected Vector2 ScrollbarDragOffset; // 滚动条拖动偏移
 
-    protected readonly AnimationTimer ScrollTimer = new();
+    protected readonly AnimationTimer ScrollTimer = new(10f);
 
     #endregion
 
@@ -171,22 +177,20 @@ public class SUIScrollbar : View
 
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
-        if (IsBeUsableH || IsBeUsableV)
+        // if (!IsBeUsableH && !IsBeUsableV) return;
+        if (IsScrollbarDragging)
         {
-            if (IsScrollbarDragging)
-            {
-                SetBarPositionDirectly(Main.MouseScreen - ScrollbarDragOffset - GetInnerDimensions().Position());
-            }
-
-            UpdateScrollPosition();
-
-            ScrollTimer.Update();
-            ShrinkTimer.Update();
-
-            base.DrawSelf(spriteBatch);
-
-            DrawScrollbar();
+            SetBarPositionDirectly(Main.MouseScreen - ScrollbarDragOffset - GetInnerDimensions().Position());
         }
+
+        UpdateScrollPosition();
+
+        ScrollTimer.Update();
+        ShrinkTimer.Update();
+
+        base.DrawSelf(spriteBatch);
+
+        DrawScrollbar();
     }
 
     public override void Update(GameTime gameTime)
@@ -204,6 +208,11 @@ public class SUIScrollbar : View
     }
 
     #endregion
+
+    public SUIScrollbar()
+    {
+        DragIgnore = false;
+    }
 
     protected virtual void UpdateScrollPosition()
     {
@@ -235,7 +244,11 @@ public class SUIScrollbar : View
         if (barSize is not { X: > 0, Y: > 0 }) return;
 
         var barBgColor = IsMouseOverScrollbar() || IsScrollbarDragging ? BarHoverColor : BarColor;
-        SDFRectangle.NoBorder(barPos, barSize,
-            new Vector4(Math.Min(barSize.X, barSize.Y) / 2f), barBgColor, FinalMatrix);
+
+        Bar.CornerRadius = new Vector4(Math.Min(barSize.X, barSize.Y) / 2f);
+        Bar.BgColor = barBgColor;
+        Bar.Draw(barPos, barSize, false, FinalMatrix);
     }
+
+    public RoundedRectangle Bar = new();
 }
