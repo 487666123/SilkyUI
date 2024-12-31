@@ -186,7 +186,7 @@ public class SilkyUserInterface
                         // 如果目标元素存在且可以被优先处理，则将视图置于顶层
                         if (CurrentHoverTarget is not null && Manager.MouseFocusUIElement == CurrentHoverTarget)
                         {
-                            Manager.MoveCurrentUserInterfaceToTop();
+                            Manager.CurrentUserInterfaceMoveToTop();
                         }
 
                         HandleMouseEvent(MouseEventType.Down, mouseButton);

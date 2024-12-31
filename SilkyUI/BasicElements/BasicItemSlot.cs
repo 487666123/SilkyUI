@@ -37,7 +37,7 @@ public class BasicItemSlot : View
         this.SetPositionPixels(52f, 52f);
         BgColor = new Color(63, 65, 151);
         BorderColor = new Color(63, 65, 151);
-        Rounded = new Vector4(8f);
+        CornerRadius = new Vector4(8f);
     }
 
     /// <summary>

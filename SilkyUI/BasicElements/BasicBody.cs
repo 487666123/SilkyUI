@@ -9,7 +9,7 @@ public abstract class BasicBody : View
         SpecifyWidth = SpecifyHeight = true;
     }
 
-    public abstract bool IsEnabled { get; set; }
+    public virtual bool IsEnabled { get; set; } = true;
 
     /// <summary>
     /// 是否不可选中
@@ -19,7 +19,7 @@ public abstract class BasicBody : View
     /// <summary>
     /// 鼠标在当前 UI 某一个元素上时调用此方法，返回 true 此元素会占用光标，防止下层 UI 触发鼠标事件
     /// </summary>
-    public abstract bool CanSetFocusTarget(UIElement target);
+    public virtual bool CanSetFocusTarget(UIElement target) => target != null && target != this;
 
     public override void Update(GameTime gameTime)
     {
@@ -77,13 +77,10 @@ public abstract class BasicBody : View
         }
     }
 
-    protected Point GetCanvasSize()
+    protected static Point GetCanvasSize()
     {
-        var maxSize = new Vector2(Main.graphics.GraphicsDevice.Viewport.Width,
-            Main.graphics.GraphicsDevice.Viewport.Height);
-        var rtSize = Vector2.Min(maxSize,
-            Vector2.Transform(new Vector2(Main.screenWidth, Main.screenHeight), FinalMatrix));
-        return new Point((int)Math.Ceiling(rtSize.X), (int)Math.Ceiling(rtSize.Y));
+        var viewport = Main.graphics.GraphicsDevice.Viewport;
+        return new Point(viewport.Width, viewport.Height);
     }
 
     /// <summary>
@@ -121,6 +118,7 @@ public abstract class BasicBody : View
         var pool = RenderTargetPool.Instance;
         var device = Main.graphics.GraphicsDevice;
 
+        // 不使用独立画布
         if (!UseRenderTarget)
         {
             base.Draw(spriteBatch);
@@ -134,7 +132,6 @@ public abstract class BasicBody : View
 
         // 画布大小计算
         var canvasSize = GetCanvasSize();
-        Console.WriteLine($"canvasSize: {canvasSize}");
         var rt2d = pool.Get(canvasSize.X, canvasSize.Y);
         try
         {

@@ -3,7 +3,6 @@
 public partial class View
 {
     public Vector2 Gap;
-    public RoundedRectangle RoundedRectangle { get; } = new();
 
 
     protected bool TransformMatrixHasChanges = true;

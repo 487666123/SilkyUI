@@ -5,16 +5,12 @@ namespace SilkyUI.BasicElements;
 
 public class SUIText : View
 {
-    /// <summary>
-    /// 原字符串
-    /// </summary>
-    public string OriginalString => _keyMode ? Language.GetTextValue(_textOrKey) : _textOrKey;
+    public void UseDeathText() => Font = FontAssets.DeathText.Value;
+    public void UseMouseText() => Font = FontAssets.MouseText.Value;
+    public bool IsLarge => Font == FontAssets.DeathText.Value;
 
-    #region 常规可控属性
+    #region 控制属性
 
-    /// <summary>
-    /// 使用的字体
-    /// </summary>
     public virtual DynamicSpriteFont Font
     {
         get => _font ?? FontAssets.MouseText.Value;
@@ -28,79 +24,44 @@ public class SUIText : View
 
     private DynamicSpriteFont _font = FontAssets.MouseText.Value;
 
-    public void UseDeathText() => Font = FontAssets.DeathText.Value;
-    public void UseMouseText() => Font = FontAssets.MouseText.Value;
-    public bool IsLarge => Font == FontAssets.DeathText.Value;
+    private string _text = string.Empty;
+    private bool _wordWrap;
+    private int _maxWordLength = 19;
+    private int _maxLines = -1;
 
-    /// <summary>
-    /// 可以作为 HJson 的 Key，也可直接作为文本。<br/>
-    /// 如果要作为 Key 请设置 <see cref="UseKey"/> = true。
-    /// </summary>
-    public string TextOrKey
+    public string Text
     {
-        get => _keyMode ? _textOrKey : Language.GetTextValue(_textOrKey);
+        get => _text;
         set
         {
-            if (_textOrKey == value) return;
-            _textOrKey = value;
+            if (_text == value) return;
+            _text = value;
             RecalculateText();
         }
     }
 
-    protected string _textOrKey = "";
-
-    /// <summary>
-    /// 使 TextOrKey 作为 HJson 的 Key 使用
-    /// </summary>
-    public bool UseKey
+    public bool WordWrap
     {
-        get => _keyMode;
+        get => _wordWrap;
         set
         {
-            if (_keyMode == value) return;
-            _keyMode = value;
+            if (_wordWrap == value) return;
+            _wordWrap = value;
             RecalculateText();
         }
     }
 
-    protected bool _keyMode = false;
-
-    /// <summary>
-    /// 文字是否换行
-    /// </summary>
-    public bool IsWrapped
+    public int MaxWordLength
     {
-        get => _isWrapped;
+        get => _maxWordLength;
         set
         {
-            if (_isWrapped == value) return;
-            _isWrapped = value;
+            if (_maxWordLength == value) return;
+            _maxWordLength = value;
             RecalculateText();
         }
     }
 
-    protected bool _isWrapped;
-
-    /// <summary>
-    /// 一个单词里最多可以含有的字符数，如果单词字符数超过该值，就会在超过maxWidth时直接就地换行，
-    /// 而不是向前寻找第一个空格。根据宽度和字符尺寸适当调整
-    /// </summary>
-    public int MaxCharacterCount
-    {
-        get => _maxCharacterCount;
-        set
-        {
-            if (_maxCharacterCount == value) return;
-            _maxCharacterCount = value;
-            RecalculateText();
-        }
-    }
-
-    protected int _maxCharacterCount = 19;
-
-    /// <summary>
-    /// 最大行数，-1即不作限制。超过该值的行数将不会被显示
-    /// </summary>
     public int MaxLines
     {
         get => _maxLines;
@@ -112,310 +73,188 @@ public class SUIText : View
         }
     }
 
-    protected int _maxLines = -1;
+    public float TextScale { get; set; } = 1f;
 
-    /// <summary>
-    /// 文字缩放比例
-    /// </summary>
-    public float TextScale = 1f;
+    public Color TextColor { get; set; } = Color.White;
 
-    /// <summary>
-    /// 文字颜色
-    /// </summary>
-    public Color TextColor = Color.White;
+    public float TextBorder { get; set; } = 2f;
 
-    public float TextBorder = 1.5f;
+    public Color TextBorderColor { get; set; } = Color.Black;
 
-    /// <summary>
-    /// 文字边框颜色
-    /// </summary>
-    public Color TextBorderColor = Color.Black;
-
-    public Vector2 TextOffset = Vector2.Zero;
-    public Vector2 TextOrigin = Vector2.Zero;
-    public Vector2 TextAlign = Vector2.Zero;
-    public Vector2 TextPercentOffset = Vector2.Zero;
+    public Vector2 TextOffset { get; set; } = Vector2.Zero;
+    public Vector2 TextPercentOffset { get; set; } = Vector2.Zero;
+    public Vector2 TextPercentOrigin { get; set; } = Vector2.Zero;
+    public Vector2 TextAlign { get; set; } = Vector2.Zero;
 
     #endregion
 
-    #region 非常规可控属性
+    protected readonly List<TextSnippet> FinalSnippets = [];
+    protected string LastText;
+    protected float LastMaxWidth;
 
-    /// <summary>
-    /// 最终展示文本
-    /// </summary>
-    public List<TextSnippet> FinalTextSnippets { get; } = [];
-
-    /// <summary>
-    /// 最后一次的 inner 宽度
-    /// </summary>
-    public float LastInnerWidth { get; protected set; }
-
-    /// <summary>
-    /// 最后一次的文本
-    /// </summary>
-    public string LastString { get; protected set; }
-
-    /// <summary>
-    /// 文字大小
-    /// </summary>
     public Vector2 TextSize { get; protected set; } = Vector2.Zero;
 
-    #endregion
-
-    /// <summary>
-    /// 修改后会影响 “文本大小” 的属性
-    /// <br/>
-    /// - keyMode
-    /// <br/>
-    /// - text
-    /// <br/>
-    /// - isLarge
-    /// <br/>
-    /// 当开启 isWrapped 的时候，除了以上属性变动，在宽度限制改变时也需要刷新
-    /// </summary>
-    public void RecalculateText()
+    protected override CalculatedStyle CalculateOuterDimensions(float left, float top, float width, float height)
     {
-        LastString = OriginalString;
+        RecalculateText(width <= 0 ? float.MaxValue : width);
 
-        if (_isWrapped)
+        if (!SpecifyWidth) width = TextSize.X;
+        if (!SpecifyHeight) height = TextSize.Y * TextScale;
+
+        return base.CalculateOuterDimensions(left, top, width, height);
+    }
+
+    protected virtual void RecalculateText(float? width = null)
+    {
+        LastText = Text;
+        LastMaxWidth = width ?? _innerDimensions.Width;
+
+        // 是否换行
+        if (_wordWrap)
         {
-            /* 原来的有Bug，不支持英文空格换行，暂时换掉
-            List<TextSnippet> finalSnippets = [];
-            List<List<TextSnippet>> firstSnippets = TextSnippetHelper.WordwrapString(LastString, TextColor, Font, GetInnerDimensions().Width / TextScale);
-
-            foreach (List<TextSnippet> snippets in firstSnippets)
-            {
-                finalSnippets.AddRange(snippets);
-                finalSnippets.Add(new TextSnippet("\n"));
-            }
-
-            if (finalSnippets.Count > 0 && finalSnippets[^1].Text == "\n")
-            {
-                finalSnippets.RemoveAt(finalSnippets.Count - 1);
-            }
-
-            FinalTextSnippets = [.. finalSnippets];
-            */
-            TextSnippetHelper.WordwrapString(FinalTextSnippets, LastString, TextColor, Font,
-                (int)(GetInnerDimensions().Width / TextScale), out _, MaxCharacterCount, MaxLines);
+            var maxWidth = _innerDimensions.Width / TextScale;
+            TextSnippetHelper.WordwrapString
+                (FinalSnippets, LastText, TextColor, Font, maxWidth, MaxWordLength, MaxLines);
         }
         else
         {
-            TextSnippetHelper.ConvertNormalSnippets(
-                TextSnippetHelper.ParseMessage(LastString, TextColor), FinalTextSnippets);
+            TextSnippetHelper.ConvertNormalSnippets
+                (TextSnippetHelper.ParseMessage(LastText, TextColor), FinalSnippets);
         }
 
-        TextSize = ChatManager.GetStringSize(Font, FinalTextSnippets.ToArray(), new Vector2(1f));
+        TextSize = ChatManager.GetStringSize(Font, FinalSnippets.ToArray(), new Vector2(1f));
     }
 
-    /// <summary>
-    /// 绘制文字
-    /// </summary>
-    /// <param name="spriteBatch"></param>
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
         base.DrawSelf(spriteBatch);
 
-        var innerSize = GetInnerDimensions().Size();
-        var innerPos = GetInnerDimensions().Position();
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (LastText != Text || (_wordWrap && LastMaxWidth != _innerDimensions.Width)) RecalculateText();
 
-        // 文本变化时或者宽度变化时, 重新计算
-        if (LastString != OriginalString || (_isWrapped && LastInnerWidth != innerSize.X))
-        {
-            LastInnerWidth = innerSize.X;
-            RecalculateText();
-        }
+        var innerSize = _innerDimensions.Size();
+        var innerPos = _innerDimensions.Position();
 
         var textSize = TextSize;
-        // 无字符时会出问题，加上下面这两行就好了
-        if (textSize.Y < Font.LineSpacing)
-            textSize.Y = Font.LineSpacing;
-        var textPos = innerPos + TextOffset;
-        textPos += TextPercentOffset * innerSize;
-        textPos += TextAlign * (innerSize - textSize * TextScale);
-        textPos -= TextOrigin * TextSize * TextScale;
+        // 无字符时会出问题，加上下面这行就好了
+        textSize.Y = Math.Max(Font.LineSpacing, textSize.Y);
 
-        SilkyUserInterfaceSystem.Instance.Configuration.FontYAxisOffset.TryGetValue(Font, out var yAxisOffset);
+        SilkyUISystem.Instance.Configuration.FontYAxisOffset.TryGetValue(Font, out var yAxisOffset);
+
+        var textPos =
+            innerPos
+            + TextOffset
+            + TextPercentOffset * innerSize
+            + TextAlign * (innerSize - textSize * TextScale)
+            - TextPercentOrigin * TextSize * TextScale;
         textPos.Y += TextScale * yAxisOffset;
 
-        UseMouseText();
-        IsWrapped = true;
-        TextOrKey = "你好世界你好世界123";
-        List<int> removes = [];
-        BgColor = Color.Black * 0.25f;
-        for (var i = 0; i < FinalTextSnippets.Count; i++)
-        {
-            if (FinalTextSnippets[i].Text.Equals("\n"))
-            {
-                removes.Add(i);
-            }
-        }
-
-        Console.WriteLine($"Count:{removes.Count}");
-
-        foreach (var snippet in FinalTextSnippets)
-        {
-            Console.WriteLine(snippet.Text);
-        }
-
-        // DrawColorCodedStringShadow(spriteBatch, Font, FinalTextSnippets,
-        //     textPos, TextBorderColor, 0f, Vector2.Zero, new Vector2(TextScale), -1f, TextBorder * TextScale);
-
-        ChatManager.DrawColorCodedString(spriteBatch, Font, FinalTextSnippets.ToArray(),
-            textPos, Color.Red, 0f, Vector2.Zero, new Vector2(TextScale), out var _, -1f);
+        var textSnippets = FinalSnippets.ToArray();
+        DrawColorCodedStringShadow(spriteBatch, Font, textSnippets,
+            textPos, TextBorderColor, 0f, Vector2.Zero, new Vector2(TextScale));
+        DrawColorCodedString(spriteBatch, Font, textSnippets,
+            textPos, TextColor, 0f, Vector2.Zero, new Vector2(TextScale), out _, -1f);
     }
 
-    private static readonly Vector2[] ShadowDirections = [-Vector2.UnitX, Vector2.UnitX, -Vector2.UnitY, Vector2.UnitY];
+    protected static readonly Vector2[] ShadowOffsets = [-Vector2.UnitX, Vector2.UnitX, -Vector2.UnitY, Vector2.UnitY];
 
-    private static void DrawColorCodedStringShadow(SpriteBatch spriteBatch, DynamicSpriteFont font,
-        List<TextSnippet> snippets,
-        Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, float maxWidth = -1f,
+    protected static void DrawColorCodedStringShadow(SpriteBatch spriteBatch, DynamicSpriteFont font,
+        TextSnippet[] snippets, Vector2 position, Color baseColor, float rotation, Vector2 origin,
+        Vector2 baseScale, float maxWidth = -1f,
         float spread = 2f)
     {
-        foreach (var offset in ShadowDirections)
+        foreach (var offset in ShadowOffsets)
             DrawColorCodedString(spriteBatch, font, snippets, position + offset * spread, baseColor,
                 rotation, origin, baseScale, out var _, maxWidth, ignoreColors: true);
     }
 
-    private static Vector2 DrawColorCodedString(SpriteBatch spriteBatch, DynamicSpriteFont font,
-        List<TextSnippet> snippets,
+    protected static Vector2 DrawColorCodedString(SpriteBatch spriteBatch, DynamicSpriteFont font,
+        TextSnippet[] snippets,
         Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, out int hoveredSnippet,
         float maxWidth, bool ignoreColors = false)
     {
-        var num = -1;
-
-        var mousePosition = Main.MouseScreen;
-        var vector = position;
-        var result = vector;
-
+        var num1 = -1;
+        var vec = new Vector2((float)Main.mouseX, (float)Main.mouseY);
+        var vector2_1 = position;
+        var vector2_2 = vector2_1;
         var x = font.MeasureString(" ").X;
         var color = baseColor;
-        var num3 = 0f;
-
-        for (var i = 0; i < snippets.Count; i++)
+        var num2 = 0.0f;
+        for (var index1 = 0; index1 < snippets.Length; ++index1)
         {
-            var textSnippet = snippets[i];
-            textSnippet.Update();
+            var snippet = snippets[index1];
+            snippet.Update();
             if (!ignoreColors)
+                color = snippet.GetVisibleColor();
+            var scale = snippet.Scale;
+            if (snippet.UniqueDraw(false, out var size, spriteBatch, vector2_1, color, baseScale.X * scale))
             {
-                color = textSnippet.GetVisibleColor();
+                if (vec.Between(vector2_1, vector2_1 + size))
+                    num1 = index1;
+                vector2_1.X += size.X;
+                vector2_2.X = Math.Max(vector2_2.X, vector2_1.X);
             }
-
-            var num2 = textSnippet.Scale;
-            if (textSnippet.UniqueDraw(justCheckingString: false, out var size, spriteBatch, vector, color,
-                    baseScale.X * num2))
+            else
             {
-                if (mousePosition.Between(vector, vector + size))
+                snippet.Text.Split('\n');
+                string[] strArray1 = Regex.Split(snippet.Text, "(\n)");
+                bool flag = true;
+                foreach (string input in strArray1)
                 {
-                    num = i;
-                }
-
-                vector.X += size.X;
-                result.X = Math.Max(result.X, vector.X);
-                continue;
-            }
-
-            var stringArray = textSnippet.Text.Split('\n');
-            var flag = true;
-            foreach (var obj in stringArray)
-            {
-                var array3 = obj.Split(' ');
-                if (obj == "\n")
-                {
-                    vector.Y += font.LineSpacing * num3 * baseScale.Y;
-                    vector.X = position.X;
-                    result.Y = Math.Max(result.Y, vector.Y);
-                    num3 = 0f;
-                    flag = false;
-                    continue;
-                }
-
-                for (var k = 0; k < array3.Length; k++)
-                {
-                    if (k != 0)
+                    Regex.Split(input, "( )");
+                    string[] strArray2 = input.Split(' ');
+                    if (input == "\n")
                     {
-                        vector.X += x * baseScale.X * num2;
+                        vector2_1.Y += (float)font.LineSpacing * num2 * baseScale.Y;
+                        vector2_1.X = position.X;
+                        vector2_2.Y = Math.Max(vector2_2.Y, vector2_1.Y);
+                        num2 = 0.0f;
+                        flag = false;
                     }
-
-                    if (maxWidth > 0f)
+                    else
                     {
-                        var num4 = font.MeasureString(array3[k]).X * baseScale.X * num2;
-                        if (vector.X - position.X + num4 > maxWidth)
+                        for (int index2 = 0; index2 < strArray2.Length; ++index2)
                         {
-                            vector.X = position.X;
-                            vector.Y += font.LineSpacing * num3 * baseScale.Y;
-                            result.Y = Math.Max(result.Y, vector.Y);
-                            num3 = 0f;
+                            if (index2 != 0)
+                                vector2_1.X += x * baseScale.X * scale;
+                            if ((double)maxWidth > 0.0)
+                            {
+                                float num3 = font.MeasureString(strArray2[index2]).X * baseScale.X * scale;
+                                if ((double)vector2_1.X - (double)position.X + (double)num3 > (double)maxWidth)
+                                {
+                                    vector2_1.X = position.X;
+                                    vector2_1.Y += (float)font.LineSpacing * num2 * baseScale.Y;
+                                    vector2_2.Y = Math.Max(vector2_2.Y, vector2_1.Y);
+                                    num2 = 0.0f;
+                                }
+                            }
+
+                            if ((double)num2 < (double)scale)
+                                num2 = scale;
+                            spriteBatch.DrawString(font, strArray2[index2], vector2_1, color, rotation, origin,
+                                baseScale * snippet.Scale * scale, SpriteEffects.None, 0.0f);
+                            Vector2 vector2_3 = font.MeasureString(strArray2[index2]);
+                            if (vec.Between(vector2_1, vector2_1 + vector2_3))
+                                num1 = index1;
+                            vector2_1.X += vector2_3.X * baseScale.X * scale;
+                            vector2_2.X = Math.Max(vector2_2.X, vector2_1.X);
                         }
-                    }
 
-                    if (num3 < num2)
-                    {
-                        num3 = num2;
-                    }
+                        if (strArray1.Length > 1 & flag)
+                        {
+                            vector2_1.Y += (float)font.LineSpacing * num2 * baseScale.Y;
+                            vector2_1.X = position.X;
+                            vector2_2.Y = Math.Max(vector2_2.Y, vector2_1.Y);
+                            num2 = 0.0f;
+                        }
 
-                    spriteBatch.DrawString(font, array3[k], vector, color, rotation, origin,
-                        baseScale * textSnippet.Scale * num2, SpriteEffects.None, 0f);
-                    var vector2 = font.MeasureString(array3[k]);
-                    if (mousePosition.Between(vector, vector + vector2))
-                    {
-                        num = i;
+                        flag = true;
                     }
-
-                    vector.X += vector2.X * baseScale.X * num2;
-                    result.X = Math.Max(result.X, vector.X);
                 }
-
-                if (stringArray.Length > 1 && flag)
-                {
-                    vector.Y += font.LineSpacing * num3 * baseScale.Y;
-                    vector.X = position.X;
-                    result.Y = Math.Max(result.Y, vector.Y);
-                    num3 = 0f;
-                }
-
-                flag = true;
             }
         }
 
-        hoveredSnippet = num;
-        return result;
+        hoveredSnippet = num1;
+        return vector2_2;
     }
-
-    /*/// <summary>
-    /// 绘制偏移
-    /// </summary>
-    public readonly static Vector2[] StringOffsets = [new Vector2(-1, 0), new Vector2(0, -1), new Vector2(1, 0), new Vector2(0, 1), new Vector2(0, 0)];
-
-    /// <summary>
-    /// 绘制带有边框的文字
-    /// </summary>
-    public static void DrawBorderString(SpriteBatch spriteBatch, DynamicSpriteFont font, Vector2 originalPosition,
-        string text, Color textColor, Color borderColor, Vector2 origin, float textScale, float border = 2f)
-    {
-        border *= textScale;
-
-        Vector2 position;
-        Color color = borderColor;
-
-        if (borderColor.Equals(Color.Transparent))
-        {
-            spriteBatch.DrawString(font, text, originalPosition, textColor, 0f, origin, textScale, 0, 0f);
-        }
-        else
-        {
-            for (int i = 0; i < 5; i++)
-            {
-                position = originalPosition + StringOffsets[i] * border;
-
-                // 最上层
-                if (i is 4)
-                {
-                    color = textColor;
-                }
-
-                spriteBatch.DrawString(font, text, position, color, 0f, origin, textScale, 0, 0f);
-            }
-        }
-    }*/
 }

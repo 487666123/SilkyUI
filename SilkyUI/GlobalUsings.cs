@@ -17,3 +17,4 @@ global using Terraria.Localization;
 global using Terraria.ModLoader;
 global using Terraria.UI;
 global using SilkyUI.Extensions;
+global using PlainSnippet = Terraria.GameContent.UI.Chat.PlainTagHandler.PlainSnippet;

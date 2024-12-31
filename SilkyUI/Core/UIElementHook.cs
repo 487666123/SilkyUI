@@ -7,7 +7,7 @@ public class UIElementHook : ModSystem
         On_UIElement.Append += (orig, self, element) =>
         {
             if (self is View view)
-                view.ViewAppend(view);
+                view.AppendFromView(view);
             else orig(self, element);
         };
 

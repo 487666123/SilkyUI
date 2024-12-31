@@ -19,6 +19,9 @@ public partial class View
         });
     }
 
+    public IOrderedEnumerable<UIElement> GetChildrenByZIndex() =>
+        Elements.OrderBy(el => el is View v ? v.ZIndex : 0f);
+
     /// <summary>
     /// 会将 <see cref="SpecifyWidth"/> 设为 true
     /// </summary>

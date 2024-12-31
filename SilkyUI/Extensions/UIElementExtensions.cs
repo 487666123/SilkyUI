@@ -130,8 +130,24 @@ public static class UIElementExtensions
 
     public static T Join<T>(this T uie, View parent) where T : View
     {
-        parent.ViewAppend(uie);
+        parent.AppendFromView(uie);
         return uie;
+    }
+
+    public static void RecalculateBubble(this View uie)
+    {
+        var w = !uie.SpecifyWidth;
+        var h = !uie.SpecifyHeight;
+        var view = uie;
+        while (view.Parent is View parent)
+        {
+            if ((w && !view.SpecifyWidth) || (!h && !view.SpecifyHeight))
+            {
+                view = parent;
+            }
+        }
+
+        view.Recalculate();
     }
 
     #region [Margin] [Padding]

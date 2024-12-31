@@ -21,12 +21,14 @@ public enum Position
     Sticky,
 }
 
-public partial class View : UIElement
+public partial class View
 {
-    public Vector4 Rounded
+    public RoundedRectangle RoundedRectangle { get; } = new();
+
+    public Vector4 CornerRadius
     {
-        get => RoundedRectangle.Rounded;
-        set => RoundedRectangle.Rounded = value;
+        get => RoundedRectangle.CornerRadius;
+        set => RoundedRectangle.CornerRadius = value;
     }
 
     public float Border
@@ -47,6 +49,8 @@ public partial class View : UIElement
         set => RoundedRectangle.BorderColor = value;
     }
 
+    public float ZIndex = 0f;
+
     /// <summary>
     /// 是相对定位
     /// </summary>
@@ -57,7 +61,7 @@ public partial class View : UIElement
     /// </summary>
     public bool IsAbsolute => Position is Position.Absolute;
 
-    public Display Display { get; set; } = Display.Flexbox;
+    public Display Display { get; set; } = Display.Block;
 
     public AnimationTimer HoverTimer { get; } = new();
 
@@ -85,9 +89,9 @@ public partial class View : UIElement
     public Position Position { get; set; } = Position.Relative;
 
     /// <summary>
-    /// 拖动忽略，默认为 <see langword="false"/> 不会影响长辈中可拖动元素拖动
+    /// 拖动忽略, true: 不影响父辈元素拖动, false: 阻止父辈元素拖动
     /// </summary>
-    public bool DragIgnore { get; set; }
+    public bool DragIgnore { get; set; } = true;
 
     public bool LeftMousePressed { get; set; }
     public bool RightMousePressed { get; set; }

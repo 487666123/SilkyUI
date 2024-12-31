@@ -70,82 +70,70 @@ public static class TextSnippetHelper
     }
 
     /// <summary>
-    /// 把 TextSnippet 转换为 PlainSnippet, 因为 PlainSnippet 文字颜色不会闪烁.<br/>
-    /// 不会修改传入的, 请使用返回值.
+    /// 把 TextSnippet 转换为 PlainSnippet<br/>
+    /// 因为 TextSnippet 文字颜色会闪烁.
     /// </summary>
     public static List<TextSnippet> ConvertNormalSnippets(List<TextSnippet> originalSnippets)
     {
         List<TextSnippet> finalSnippets = [];
-        foreach (var snippet in originalSnippets)
-        {
-            if (snippet.GetType() == typeof(TextSnippet))
-            {
-                finalSnippets.Add(new PlainTagHandler.PlainSnippet(snippet.Text, snippet.Color, snippet.Scale));
-                continue;
-            }
-
-            finalSnippets.Add(snippet);
-        }
-
+        finalSnippets.AddRange(originalSnippets.Select(snippet => snippet.GetType() == typeof(TextSnippet)
+            ? new PlainSnippet(snippet.Text, snippet.Color, snippet.Scale)
+            : snippet));
         return finalSnippets;
     }
 
     /// <summary>
-    /// 把 TextSnippet 转换为 PlainSnippet, 因为 PlainSnippet 文字颜色不会闪烁.<br/>
-    /// 不会修改传入的, 请使用返回值.
+    /// 把 TextSnippet 转换为 PlainSnippet<br/>
+    /// 因为 TextSnippet 文字颜色会闪烁.
     /// </summary>
-    public static List<TextSnippet> ConvertNormalSnippets(List<TextSnippet> originalSnippets,
-        List<TextSnippet> finalSnippets)
+    public static void ConvertNormalSnippets(List<TextSnippet> originalSnippets, List<TextSnippet> finalSnippets)
     {
         finalSnippets.Clear();
-        foreach (var snippet in originalSnippets)
-        {
-            if (snippet.GetType() == typeof(TextSnippet))
-            {
-                finalSnippets.Add(new PlainTagHandler.PlainSnippet(snippet.Text, snippet.Color, snippet.Scale));
-                continue;
-            }
-
-            finalSnippets.Add(snippet);
-        }
-
-        return finalSnippets;
+        finalSnippets.AddRange(originalSnippets.Select(snippet => snippet.GetType() == typeof(TextSnippet)
+            ? new PlainSnippet(snippet.Text, snippet.Color, snippet.Scale)
+            : snippet));
     }
 
-    private static PlainTagHandler.PlainSnippet CreateLineBreakSnippet() => new("\n");
-
-    /// <summary>
-    /// 针对textSnippet特殊文本的换行
-    /// </summary>
-    public static TextSnippet[] WordwrapString(
-        List<TextSnippet> originalSnippets, List<TextSnippet> finalSnippets, Color textColor, DynamicSpriteFont font,
-        int maxWidth, out float lastLineLength, int maxCharacterCount = 19, int maxLines = -1)
+    public class TextLine
     {
-        finalSnippets.Clear();
-        var lineCount = 1; // 行数
-        var currentLineLength = 0f; // 当前行长度
+        public readonly List<TextSnippet> Snippets = [];
+        public float Width { get; set; }
+        public float Height { get; set; }
+    }
 
-        foreach (var snippet in originalSnippets)
+    /// <summary> TextSnippet 特殊文本换行 </summary>
+    public static void WordwrapString(List<TextSnippet> original, List<TextSnippet> final,
+        Color textColor, DynamicSpriteFont font, float maxWidth, int maxCharacterCount = 19, int maxLines = -1)
+    {
+        final.Clear();
+
+        var lineCount = 0;
+        var currentLineLength = 0f;
+
+        foreach (var snippet in original)
         {
             // 普通文本
-            if (snippet is PlainTagHandler.PlainSnippet)
+            if (snippet is PlainSnippet)
             {
                 var cacheString = ""; // 缓存字符串 - 准备输入的字符
+
+                // 遍历字符
                 for (var i = 0; i < snippet.Text.Length; i++)
                 {
-                    var characterMetrics = font.GetCharacterMetrics(snippet.Text[i]);
+                    var character = snippet.Text[i];
+                    var characterMetrics = font.GetCharacterMetrics(character);
                     currentLineLength += font.CharacterSpacing + characterMetrics.KernedWidth;
 
-                    if (currentLineLength > maxWidth && !char.IsWhiteSpace(snippet.Text[i]))
+                    if (currentLineLength > maxWidth && !char.IsWhiteSpace(character))
                     {
                         // 如果第一个字符是空格，单词长度小于19（实际上是18因为第一个字符为空格），可以空格换行
                         var canWrapWord = cacheString.Length > 1 && cacheString.Length < maxCharacterCount;
 
                         // 找不到空格，或者拆腻子，则强制换行
-                        if (!canWrapWord || i > 0 && CanBreakBetween(snippet.Text[i - 1], snippet.Text[i]))
+                        if (!canWrapWord || i > 0 && CanBreakBetween(snippet.Text[i - 1], character))
                         {
-                            finalSnippets.Add(new PlainTagHandler.PlainSnippet(cacheString, snippet.Color));
-                            finalSnippets.Add(CreateLineBreakSnippet());
+                            final.Add(new PlainSnippet(cacheString, snippet.Color));
+                            final.AddLineBreak();
                             currentLineLength = characterMetrics.KernedWidthOnNewLine;
                             cacheString = "";
                             lineCount++;
@@ -157,8 +145,8 @@ public static class TextSnippetHelper
                             // 就不改下面的cacheString[1..]了
                             if (cacheString[0] != ' ')
                                 cacheString = " " + cacheString;
-                            finalSnippets.Add(new PlainTagHandler.PlainSnippet(cacheString[1..], snippet.Color));
-                            finalSnippets.Add(CreateLineBreakSnippet());
+                            final.Add(new PlainSnippet(cacheString[1..], snippet.Color));
+                            final.AddLineBreak();
                             currentLineLength = font.MeasureString(cacheString).X;
                             cacheString = "";
                             lineCount++;
@@ -167,74 +155,76 @@ public static class TextSnippetHelper
 
                     // 这么做可以分割单词，并且使自然分割单词（即不因换行过长强制分割的单词）第一个字符总是空格
                     // 或者是将CJK字符与非CJK字符分割
-                    if (cacheString != string.Empty && (char.IsWhiteSpace(snippet.Text[i]) ||
-                                                        IsCjk(cacheString[^1]) != IsCjk(snippet.Text[i])))
+
+                    if (!string.IsNullOrEmpty(cacheString) &&
+                        (char.IsWhiteSpace(character) || IsCjk(cacheString[^1]) != IsCjk(character)))
                     {
-                        finalSnippets.Add(new PlainTagHandler.PlainSnippet(cacheString, snippet.Color));
+                        final.AddPlainSnippet(cacheString, snippet.Color);
                         cacheString = "";
                     }
 
                     // 原有换行则将当前行长度重置
-                    if (snippet.Text[i] is '\n')
+                    if (character is '\n')
                     {
                         currentLineLength = 0;
                         lineCount++;
                     }
 
-                    cacheString += snippet.Text[i];
+                    cacheString += character;
                 }
 
-                finalSnippets.Add(new PlainTagHandler.PlainSnippet(cacheString, snippet.Color));
+                final.AddPlainSnippet(cacheString, snippet.Color);
             }
             // 富文本
             else
             {
                 var length = snippet.GetStringLength(font);
                 currentLineLength += length;
-                // 超了 - 换行再添加，注意起始长度
+
                 if (currentLineLength > maxWidth)
                 {
-                    finalSnippets.Add(CreateLineBreakSnippet());
+                    final.AddLineBreak();
                     lineCount++;
                     currentLineLength = length;
                 }
 
-                finalSnippets.Add(snippet);
+                final.Add(snippet);
             }
 
-            if (maxLines != -1 && lineCount >= maxLines + 1)
-            {
-                // 一直向前移除到最后一个换行，并把最后一个换行也移除
-                var linesToBeRemoved = lineCount - maxLines;
-                for (var i = 0; i < linesToBeRemoved; i++)
-                {
-                    while (finalSnippets.Count > 1 && finalSnippets[^1].Text != "\n")
-                    {
-                        finalSnippets.RemoveAt(finalSnippets.Count - 1);
-                    }
-
-                    finalSnippets.RemoveAt(finalSnippets.Count - 1);
-                }
-
-                lastLineLength = 0;
-                return finalSnippets.ToArray();
-            }
+            // 限制行数
+            if (maxLines == -1 || lineCount < maxLines) continue;
+            RemoveRowFromBackToFront(final, lineCount - maxLines);
         }
+    }
 
-        lastLineLength = currentLineLength;
-        return finalSnippets.ToArray();
+    private static void AddLineBreak(this List<TextSnippet> snippets) =>
+        snippets.Add(new PlainSnippet("\n"));
+
+    private static void AddPlainSnippet(this List<TextSnippet> snippets, string text, Color color) =>
+        snippets.Add(new PlainSnippet(text, color));
+
+    // 从后向前删除行
+    private static void RemoveRowFromBackToFront(List<TextSnippet> final, int rows)
+    {
+        for (var i = 0; i < rows; i++)
+        {
+            while (final.Count > 0 && final[^1].Text != "\n")
+            {
+                final.RemoveAt(final.Count - 1);
+            }
+
+            final.RemoveAt(final.Count - 1);
+        }
     }
 
     /// <summary>
     /// 针对 <see cref="TextSnippet"/> 特殊文本的换行
     /// </summary>
-    public static TextSnippet[] WordwrapString(List<TextSnippet> finalSnippets, string text, Color textColor,
-        DynamicSpriteFont font, int maxWidth,
-        out float lastLineLength, int maxCharacterCount = 19, int maxLines = -1)
+    public static void WordwrapString(List<TextSnippet> final, string text, Color textColor,
+        DynamicSpriteFont font, float maxWidth, int maxCharacterCount = 19, int maxLines = -1)
     {
-        var originalSnippets = ChatManager.ParseMessage(text, textColor);
-        return WordwrapString(ConvertNormalSnippets(originalSnippets), finalSnippets, textColor, font,
-            maxWidth, out lastLineLength, maxCharacterCount, maxLines);
+        var original = ConvertNormalSnippets(ParseMessage(text, textColor));
+        WordwrapString(original, final, textColor, font, maxWidth, maxCharacterCount, maxLines);
     }
 
     // https://unicode-table.com/cn/blocks/cjk-unified-ideographs/ 中日韩统一表意文字
@@ -289,7 +279,7 @@ public static class TextSnippetHelper
                 foreach (TextSnippet snippet in snippets)
                 {
                     // 简单片段
-                    if (snippet is PlainTagHandler.PlainSnippet)
+                    if (snippet is PlainSnippet)
                     {
                         float width = snippet.GetStringLength(font);
 

@@ -1,5 +1,8 @@
 ﻿namespace SilkyUI;
 
+/// <summary>
+/// Game UI Layer
+/// </summary>
 public class SilkyUserInterfaceLayer : GameInterfaceLayer
 {
     public SilkyUserInterface UserInterface { get; }

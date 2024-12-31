@@ -21,25 +21,23 @@ public class SUIDraggableView : View
     {
         SetPadding(10f);
         Draggable = draggable;
-        DragIgnore = true;
 
         ShadowColor = borderColor * 0.35f;
 
         BorderColor = borderColor;
         BgColor = backgroundColor;
-        Rounded = new Vector4(rounded);
+        CornerRadius = new Vector4(rounded);
     }
 
-    public SUIDraggableView(Color backgroundColor, Color borderColor, Vector4 rounded, bool draggable = false)
+    public SUIDraggableView(Color backgroundColor, Color borderColor, Vector4 cornerRadius, bool draggable = false)
     {
         SetPadding(10f);
-        DragIgnore = true;
         ShadowColor = borderColor * 0.35f;
         Draggable = draggable;
 
         BorderColor = borderColor;
         BgColor = backgroundColor;
-        Rounded = rounded;
+        CornerRadius = cornerRadius;
     }
 
     public override void LeftMouseDown(UIMouseEvent evt)
@@ -96,7 +94,7 @@ public class SUIDraggableView : View
 
         if (Shaded)
         {
-            SDFRectangle.Shadow(shadowPosition, shadowSize, Rounded,
+            SDFRectangle.Shadow(shadowPosition, shadowSize, CornerRadius,
                 ShadowColor, ShadowThickness, FinalMatrix);
         }
 

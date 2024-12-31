@@ -2,7 +2,7 @@
 
 namespace SilkyUI.BasicComponents;
 
-public class SUIScrollbar2 : View
+public class SUIScrollbar : View
 {
     #region Basic Fields
 
@@ -12,7 +12,7 @@ public class SUIScrollbar2 : View
         set => _currentScrollPosition = Vector2.Clamp(value, Vector2.Zero, GetScrollRange());
     }
 
-    protected Vector2 _currentScrollPosition;
+    private Vector2 _currentScrollPosition;
 
     public float ScrollMultiplier = 1f;
 
@@ -22,7 +22,7 @@ public class SUIScrollbar2 : View
         set => _targetScrollPosition = Vector2.Clamp(value * ScrollMultiplier, Vector2.Zero, GetScrollRange());
     }
 
-    public Vector2 _targetScrollPosition;
+    private Vector2 _targetScrollPosition;
 
     public Vector2 OriginalScrollPosition;
     public Vector2 LastTargetScrollPosition;
@@ -43,7 +43,7 @@ public class SUIScrollbar2 : View
         set => _scrollViewSize = Vector2.Max(Vector2.One, value);
     }
 
-    public Vector2 _scrollViewSize = Vector2.One;
+    private Vector2 _scrollViewSize = Vector2.One;
 
     public Vector2 TargetSize
     {
@@ -82,7 +82,7 @@ public class SUIScrollbar2 : View
     /// </summary>
     public Vector2 GetScrollRange()
     {
-        Vector2 result = Vector2.Max(Vector2.Zero, TargetSize - MaskSize);
+        var result = Vector2.Max(Vector2.Zero, TargetSize - MaskSize);
         result.X = MathF.Round(result.X, 2);
         result.Y = MathF.Round(result.Y, 2);
         return result;
@@ -92,16 +92,15 @@ public class SUIScrollbar2 : View
 
     public Vector2 GetBarSize()
     {
-        float innerWidth = GetInnerDimensions().Width;
-        float innerHeight = GetInnerDimensions().Height;
+        var innerWidth = GetInnerDimensions().Width;
+        var innerHeight = GetInnerDimensions().Height;
 
-        Vector2 barSize = GetInnerDimensions().Size() * (MaskSize / TargetSize);
+        var barSize = GetInnerDimensions().Size() * (MaskSize / TargetSize);
 
-        if (IsBarSizeLimited)
-        {
-            Vector2 min = new Vector2(Math.Min(innerWidth, innerHeight));
-            barSize = Vector2.Clamp(barSize, min, GetInnerDimensions().Size());
-        }
+        if (!IsBarSizeLimited) return barSize;
+
+        var min = new Vector2(Math.Min(innerWidth, innerHeight));
+        barSize = Vector2.Clamp(barSize, min, GetInnerDimensions().Size());
 
         return barSize;
     }
@@ -138,11 +137,11 @@ public class SUIScrollbar2 : View
 
     #region private static Fields
 
-    protected AnimationTimer _shrinkTimer = new(5f, 20f);
-    protected bool _isScrollbarDragging; // 滚动条拖动中
-    protected Vector2 _scrollbarDragOffset; // 滚动条拖动偏移
+    protected readonly AnimationTimer ShrinkTimer = new(5f, 20f);
+    protected bool IsScrollbarDragging; // 滚动条拖动中
+    protected Vector2 ScrollbarDragOffset; // 滚动条拖动偏移
 
-    protected readonly AnimationTimer ScrollTimer = new(5f); // 动画
+    protected readonly AnimationTimer ScrollTimer = new();
 
     #endregion
 
@@ -157,33 +156,32 @@ public class SUIScrollbar2 : View
     {
         base.LeftMouseDown(evt);
 
-        if ((IsBeUsableH || IsBeUsableV) && IsMouseOverScrollbar())
-        {
-            _isScrollbarDragging = true;
-            _scrollbarDragOffset = Main.MouseScreen - GetBarScreenPosition();
-        }
+        if ((!IsBeUsableH && !IsBeUsableV) || !IsMouseOverScrollbar()) return;
+
+        IsScrollbarDragging = true;
+        ScrollbarDragOffset = Main.MouseScreen - GetBarScreenPosition();
     }
 
     public override void LeftMouseUp(UIMouseEvent evt)
     {
         base.LeftMouseUp(evt);
 
-        _isScrollbarDragging = false;
+        IsScrollbarDragging = false;
     }
 
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
         if (IsBeUsableH || IsBeUsableV)
         {
-            if (_isScrollbarDragging)
+            if (IsScrollbarDragging)
             {
-                SetBarPositionDirectly(Main.MouseScreen - _scrollbarDragOffset - GetInnerDimensions().Position());
+                SetBarPositionDirectly(Main.MouseScreen - ScrollbarDragOffset - GetInnerDimensions().Position());
             }
 
             UpdateScrollPosition();
 
             ScrollTimer.Update();
-            _shrinkTimer.Update();
+            ShrinkTimer.Update();
 
             base.DrawSelf(spriteBatch);
 
@@ -198,10 +196,10 @@ public class SUIScrollbar2 : View
 
         if (IsBeUsableH || IsBeUsableV)
         {
-            if (IsMouseHovering || _isScrollbarDragging)
-                _shrinkTimer.StartReverseUpdate();
+            if (IsMouseHovering || IsScrollbarDragging)
+                ShrinkTimer.StartReverseUpdate();
             else
-                _shrinkTimer.StartForwardUpdate();
+                ShrinkTimer.StartForwardUpdate();
         }
     }
 
@@ -229,16 +227,15 @@ public class SUIScrollbar2 : View
 
         if (ShrinkIfNotHovering)
         {
-            float shrinkFactor = 0.4f;
-            barPos.X += _shrinkTimer.Lerp(0, barSize.X * (1f - shrinkFactor));
-            barSize.X = _shrinkTimer.Lerp(barSize.X, barSize.X * shrinkFactor);
+            const float shrinkFactor = 0.4f;
+            barPos.X += ShrinkTimer.Lerp(0, barSize.X * (1f - shrinkFactor));
+            barSize.X = ShrinkTimer.Lerp(barSize.X, barSize.X * shrinkFactor);
         }
 
-        if (barSize is { X: > 0, Y: > 0 })
-        {
-            Color barBgColor = IsMouseOverScrollbar() || _isScrollbarDragging ? BarHoverColor : BarColor;
-            SDFRectangle.NoBorder(barPos, barSize,
-                new Vector4(Math.Min(barSize.X, barSize.Y) / 2f), barBgColor, FinalMatrix);
-        }
+        if (barSize is not { X: > 0, Y: > 0 }) return;
+
+        var barBgColor = IsMouseOverScrollbar() || IsScrollbarDragging ? BarHoverColor : BarColor;
+        SDFRectangle.NoBorder(barPos, barSize,
+            new Vector4(Math.Min(barSize.X, barSize.Y) / 2f), barBgColor, FinalMatrix);
     }
 }

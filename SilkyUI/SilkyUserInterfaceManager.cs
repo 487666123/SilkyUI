@@ -1,4 +1,6 @@
-﻿namespace SilkyUI;
+﻿using AutoloadAttribute = SilkyUI.Attributes.AutoloadAttribute;
+
+namespace SilkyUI;
 
 public class SilkyUserInterfaceManager
 {
@@ -49,9 +51,9 @@ public class SilkyUserInterfaceManager
     public Dictionary<SilkyUserInterface, Type> BasicBodyTypes { get; } = [];
 
     /// <summary>
-    /// <see cref="UserInterface"/> 实例绑定的 <see cref="BasicBody"/> <see cref="AutoloadUserInterfaceAttribute"/>
+    /// <see cref="UserInterface"/> 实例绑定的 <see cref="BasicBody"/> <see cref="Attributes.AutoloadAttribute"/>
     /// </summary>
-    public Dictionary<SilkyUserInterface, AutoloadUserInterfaceAttribute> BasicBodyTypesAutoloadInfo { get; } = [];
+    public Dictionary<SilkyUserInterface, AutoloadAttribute> BasicBodyTypesAutoloadInfo { get; } = [];
 
     /// <summary>
     /// 界面层顺序
@@ -66,8 +68,7 @@ public class SilkyUserInterfaceManager
 
     #endregion
 
-    public void RegisterUserInterface(
-        AutoloadUserInterfaceAttribute autoloadAttribute, Type basicBodyType)
+    public void RegisterUI(Type basicBodyType, AutoloadAttribute autoloadAttribute)
     {
         var userInterface = new SilkyUserInterface();
 
@@ -76,14 +77,13 @@ public class SilkyUserInterfaceManager
 
         if (SilkyUserInterfaces.TryGetValue(autoloadAttribute.InsertionPoint, out var userInterfaces))
             userInterfaces.Add(userInterface);
-        else
-            SilkyUserInterfaces[autoloadAttribute.InsertionPoint] = [userInterface];
+        else SilkyUserInterfaces[autoloadAttribute.InsertionPoint] = [userInterface];
     }
 
     /// <summary>
     /// 移动当前 UserInterface 到顶层
     /// </summary>
-    public void MoveCurrentUserInterfaceToTop()
+    public void CurrentUserInterfaceMoveToTop()
     {
         if (CurrentUserInterfaces.Remove(CurrentUserInterface))
         {

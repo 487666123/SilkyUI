@@ -1,12 +1,9 @@
 ﻿namespace SilkyUI.BasicElements;
 
 /// <summary>
-/// 简单说明: 2024.8.26 <br/>
-/// 只有 View 能用, 别的都不建议用. <br/>
-/// 使用固定宽高必须设置 <see cref="SpecifyWidth"/> <see cref="SpecifyHeight"/> 为 true <br/>
-/// 使用这套系统所有 UI 元素都必须基于 <see cref="View"/> <br/>
+/// 所有 SilkyUI 元素的父类
 /// </summary>
-public partial class View
+public partial class View : UIElement
 {
     public View()
     {
@@ -21,36 +18,26 @@ public partial class View
         OnMiddleMouseUp += (_, _) => MiddleMousePressed = false;
     }
 
-    protected virtual Vector2 GetStartingPosition()
-    {
-        return Parent is null ? Vector2.Zero : Parent._innerDimensions.Position();
-    }
+    protected virtual Vector2 GetStartingPosition() =>
+        Parent is null ? Vector2.Zero : Parent._innerDimensions.Position();
 
     protected virtual Vector2 GetContainerSize()
     {
+        // 无父元素
         if (Parent is null)
             return SilkyUIHelper.GetScreenScaledSize();
 
-        if (Parent is not View parent)
-            return Parent._innerDimensions.Size();
+        var size = Parent._innerDimensions.Size();
 
-        var size = parent._innerDimensions.Size();
+        if (IsAbsolute || Parent is not View parent) return size;
 
-        // 可能是负数, 所以要设为 0
         if (!parent.SpecifyWidth) size.X = 0;
         if (!parent.SpecifyHeight) size.Y = 0;
 
         return size;
     }
 
-    protected virtual UIBounds GetContainerBounds()
-    {
-        return new UIBounds(GetStartingPosition(), GetContainerSize());
-    }
-
-    protected bool ParentIsCalculating() => Parent is View { Calculating: false };
-
-    protected bool Calculating { get; set; }
+    protected virtual ElementBounds GetContainerBounds() => new(GetStartingPosition(), GetContainerSize());
 
     protected float RelativeLeft;
     protected float RelativeTop;
@@ -100,7 +87,7 @@ public partial class View
                 MaxWidth.GetValue(size.Y));
         }
 
-        var children = Children.OfType<View>().ToList();
+        var children = Elements.OfType<View>().ToList();
         children.ForEach(child => child.RecalculateSize());
 
         OuterWidth = InnerWidth + this.HMargin() + Border * 2 + this.HPadding();
@@ -117,23 +104,33 @@ public partial class View
         // ApplyLayoutOffset();
     }
 
+    protected bool ParentIsCalculating() => Parent is View { Calculating: false };
+
+    protected bool Calculating { get; set; }
+
     public override void Recalculate()
     {
         Calculating = true;
         try
         {
-            if (!ParentIsCalculating())
-                RecalculateByTop();
-
-            ClassifyElements();
+            if (!ParentIsCalculating()) RecalculateByTop();
 
             var parentDimensions = GetContainerBounds().ToCalculatedStyle();
-
             _outerDimensions = CalculateOuterDimensionsByParentDimensions(parentDimensions);
             _dimensions = CalculateDimensions(_outerDimensions);
             _innerDimensions = CalculateInnerDimensions(_dimensions);
 
+            ClassifyElements();
             RecalculateChildren();
+
+            if (Display is Display.Flexbox)
+                CalculateFlexLayout();
+
+            if (Parent is View parent && (!SpecifyWidth || !SpecifyHeight))
+                FinalCalculate(parent);
+
+            // 绝对定位
+            AbsoluteElements.ForEach(element => element.Recalculate());
         }
         catch (Exception e)
         {
@@ -141,8 +138,7 @@ public partial class View
         }
         finally
         {
-            if (Calculating)
-                PostRecalculateByTop();
+            if (!ParentIsCalculating()) PostRecalculateByTop();
         }
 
         Calculating = false;
@@ -150,31 +146,31 @@ public partial class View
 
     #region CalculateOuterDimensions
 
-    protected float CalculateLeft(float parentLeft, float parentWidth)
+    protected virtual float CalculateLeft(float parentLeft, float parentWidth)
     {
         return Left.GetValue(parentWidth) + parentLeft;
     }
 
-    protected float CalculateTop(float parentTop, float parentHeight)
+    protected virtual float CalculateTop(float parentTop, float parentHeight)
     {
         return Top.GetValue(parentHeight) + parentTop;
     }
 
-    protected float CalculateWidth(float container)
+    protected virtual float CalculateWidth(float container)
     {
         return MathHelper.Clamp(Width.GetValue(container),
             MinWidth.GetValue(container),
             MaxWidth.GetValue(container));
     }
 
-    protected float CalculateHeight(float container)
+    protected virtual float CalculateHeight(float container)
     {
         return MathHelper.Clamp(Height.GetValue(container),
             MinHeight.GetValue(container),
             MaxHeight.GetValue(container));
     }
 
-    protected CalculatedStyle CalculateOuterDimensions(float left, float top, float width, float height)
+    protected virtual CalculatedStyle CalculateOuterDimensions(float left, float top, float width, float height)
     {
         return BoxSizing switch
         {
@@ -196,7 +192,7 @@ public partial class View
     /// 计算属性，基于父元素尺寸<br/>
     /// 不使用 <see cref="UIElement.GetDimensionsBasedOnParentDimensions(CalculatedStyle)"/>
     /// </summary>
-    public virtual CalculatedStyle CalculateOuterDimensionsByParentDimensions(CalculatedStyle parentDimensions)
+    protected virtual CalculatedStyle CalculateOuterDimensionsByParentDimensions(CalculatedStyle parentDimensions)
     {
         var left = CalculateLeft(parentDimensions.X, parentDimensions.Width);
         var top = CalculateTop(parentDimensions.Y, parentDimensions.Height);
@@ -210,36 +206,13 @@ public partial class View
             outerDimensions.X += (parentDimensions.Width - outerDimensions.Width) * HAlign;
             outerDimensions.Y += (parentDimensions.Height - outerDimensions.Height) * VAlign;
         }
-        else if (IsRelative && Parent is View view)
+        else if (IsRelative && Parent is View parent)
         {
-            if (view.SpecifyWidth)
+            if (parent.SpecifyWidth)
                 outerDimensions.X += (parentDimensions.Width - outerDimensions.Width) * HAlign;
-            if (view.SpecifyHeight)
+            if (parent.SpecifyHeight)
                 outerDimensions.Y += (parentDimensions.Height - outerDimensions.Height) * VAlign;
         }
-
-        // if (IsRelativePosition && Parent is View { Display: Display.InlineBlock } parent)
-        // {
-        //     var preElement = this.PreviousRelativeElement();
-        //     var preElementRightBottom = preElement._outerDimensions.RightBottom();
-        //
-        //     if (parent.SpecifyWidth)
-        //     {
-        //         if (preElementRightBottom.X + result.Width > parentDimensions.Right())
-        //         {
-        //             result.X = parentDimensions.X;
-        //             result.Y = preElementRightBottom.Y;
-        //         }
-        //         else
-        //         {
-        //             result.X = (result.X - parentDimensions.X) + preElementRightBottom.X;
-        //         }
-        //     }
-        //     else
-        //     {
-        //         result.X = preElementRightBottom.X +
-        //     }
-        // }
 
         return outerDimensions;
     }
@@ -261,8 +234,8 @@ public partial class View
         var innerDimensions = dimensions;
         innerDimensions.X += PaddingLeft + Border;
         innerDimensions.Y += PaddingTop + Border;
-        innerDimensions.Width -= this.HPadding() + Border;
-        innerDimensions.Height -= this.VPadding() + Border;
+        innerDimensions.Width -= this.HPadding() + Border * 2;
+        innerDimensions.Height -= this.VPadding() + Border * 2;
         return innerDimensions;
     }
 
@@ -271,21 +244,10 @@ public partial class View
     /// <summary>
     /// 重新计算子元素
     /// </summary>
-    public override void RecalculateChildren()
-    {
-        FlowElements.ForEach(element => element.Recalculate());
+    public override void RecalculateChildren() =>
+        FlowElements?.ForEach(element => element.Recalculate());
 
-        if (Display is Display.Flexbox)
-            CalculateFlexLayout();
-
-        if (Parent is View parent && (!SpecifyWidth || !SpecifyHeight))
-            AgainRecalculate(parent);
-
-        // 绝对定位
-        AbsoluteElements.ForEach(element => element.Recalculate());
-    }
-
-    protected bool CalculateContentSize(out Vector2 content)
+    protected virtual bool CalculateContentSize(out Vector2 content)
     {
         var start = _innerDimensions.Position();
         var end = FlowElements.Aggregate(start,
@@ -295,32 +257,33 @@ public partial class View
         return content is { X: > 0 } or { Y: > 0 };
     }
 
-    /// <summary>
-    /// 计算位置与偏移
-    /// </summary>
-    protected virtual void AgainRecalculate(View parent)
+    protected float CalculateOuterWidthByContent(Vector2 content) =>
+        content.X + this.HMargin() + this.HPadding() + Border * 2;
+
+    protected float CalculateOuterHeightByContent(Vector2 content) =>
+        content.Y + this.VMargin() + this.VPadding() + Border * 2;
+
+    protected virtual void FinalCalculate(View parent)
     {
         if (!CalculateContentSize(out var content)) return;
 
         var offset = new Vector2();
 
-        // 宽度: auto
+        // width: auto
         if (!SpecifyWidth)
         {
-            _outerDimensions.Width = content.X + this.HMargin() + this.HPadding() + Border * 2;
+            _outerDimensions.Width = CalculateOuterWidthByContent(content);
 
-            if (Position is Position.Absolute ||
-                (Position is Position.Relative && parent.SpecifyWidth))
+            if (Position is Position.Absolute || (Position is Position.Relative && parent.SpecifyWidth))
                 offset.X = -_outerDimensions.Width * HAlign;
         }
 
-        // 高度: auto
+        // height: auto
         if (!SpecifyHeight)
         {
-            _outerDimensions.Height = content.Y + this.VMargin() + this.VPadding() + Border * 2;
+            _outerDimensions.Height = CalculateOuterHeightByContent(content);
 
-            if (Position is Position.Absolute ||
-                (Position is Position.Relative && parent.SpecifyHeight))
+            if (Position is Position.Absolute || (Position is Position.Relative && parent.SpecifyHeight))
                 offset.Y = -_outerDimensions.Height * VAlign;
         }
 
@@ -350,7 +313,7 @@ public partial class View
         _innerDimensions.X += LayoutOffset.X;
         _innerDimensions.Y += LayoutOffset.Y;
 
-        foreach (var child in Children.OfType<View>())
+        foreach (var child in Elements.OfType<View>())
         {
             child.LayoutOffset += LayoutOffset;
             child.ApplyLayoutOffset();
@@ -362,67 +325,46 @@ public partial class View
     public virtual UIElement GetElementAtFromView(Vector2 point)
     {
         var children =
-            Elements.OfType<View>()
-                .Where(el => !el.IgnoresMouseInteraction).Reverse().ToArray();
+            GetChildrenByZIndex().OfType<View>().Where(el => !el.IgnoresMouseInteraction).Reverse().ToArray();
 
         if (OverflowHidden && !ContainsPoint(point)) return null;
 
         foreach (var child in children)
         {
-            var target = child.GetElementAt(point);
-            if (target is not null)
-                return target;
+            if (child.GetElementAt(point) is { } target) return target;
         }
 
-        if (IgnoresMouseInteraction)
-            return null;
+        if (IgnoresMouseInteraction) return null;
 
         return ContainsPoint(point) ? this : null;
-
-        // for (var index = Elements.Count - 1; index >= 0; --index)
-        // {
-        //     var element = Elements[index];
-        //     if (element.IgnoresMouseInteraction || !element.ContainsPoint(point)) continue;
-        //     target = element;
-        //     break;
-        // }
-        //
-        // if (target != null)
-        //     return target.GetElementAt(point);
-        // if (IgnoresMouseInteraction)
-        //     return null;
-        // return ContainsPoint(point) ? this : null;
     }
 
     /// <summary>
     /// 判断点是否在元素内, 会计算<see cref="FinalMatrix"/>
     /// </summary>
-    /// <param name="point"></param>
-    /// <returns></returns>
     public override bool ContainsPoint(Vector2 point) =>
         base.ContainsPoint(Vector2.Transform(point, Matrix.Invert(FinalMatrix)));
 
+    /// <summary>
+    /// 鼠标悬停声音
+    /// </summary>
     public SoundStyle? MouseOverSound { get; set; }
+
     public void UseMenuTickSoundForMouseOver() => MouseOverSound = SoundID.MenuTick;
 
     public override void MouseOver(UIMouseEvent evt)
     {
-        if (MouseOverSound is not null)
+        if (MouseOverSound != null)
             SoundEngine.PlaySound(MouseOverSound);
         base.MouseOver(evt);
     }
 
-    public delegate bool OnAppendEventHandler(View parent, View child);
-
-    public event OnAppendEventHandler OnViewAppend;
-
-    public virtual View ViewAppend(View child)
+    public virtual View AppendFromView(View child)
     {
-        OnViewAppend?.Invoke(this, child);
         child.Remove();
         child.Parent = this;
         Elements.Add(child);
-        child.Recalculate();
+        Recalculate();
         return this;
     }
 }
