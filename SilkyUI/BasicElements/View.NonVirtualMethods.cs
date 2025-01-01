@@ -12,7 +12,7 @@ public partial class View
 
         Elements.ForEach(element =>
         {
-            if (element is View { Position: Position.Relative } view)
+            if (element is View { Positioning: Positioning.Relative } view)
                 FlowElements.Add(view);
             else
                 AbsoluteElements.Add(element);

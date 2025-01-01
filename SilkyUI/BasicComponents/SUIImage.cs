@@ -56,12 +56,11 @@ public class SUIImage : View
         Height.Pixels = Texture.Height + this.VPadding();
     }
 
-    protected override CalculatedStyle CalculateOuterDimensions(float left, float top, float width, float height)
+    protected override Vector2 CalculateOuterSize(float width, float height)
     {
         if (!SpecifyWidth) width = Texture?.Width ?? 0f;
         if (!SpecifyHeight) height = Texture?.Height ?? 0f;
-        return new CalculatedStyle(
-            left, top,
+        return new Vector2(
             width + this.HPadding() + this.HMargin() + Border * 2f,
             height + this.VPadding() + this.VMargin() + Border * 2f);
     }

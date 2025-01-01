@@ -17,6 +17,28 @@ public class ChatUI : BasicBody
         var backgroundColor = new Color(63, 65, 151);
         var borderColor = new Color(18, 18, 38);
 
+        // MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
+        // {
+        //     Display = Display.Flexbox,
+        //     FlexDirection = FlexDirection.Row,
+        //     FlexWrap = true,
+        //     Gap = new Vector2(8f)
+        // }.Join(this);
+        // MainPanel.SetWidth(300f);
+        //
+        // for (var i = 0; i < 5; i++)
+        // {
+        //     var view = new View
+        //     {
+        //         Border = 2,
+        //         BorderColor = borderColor,
+        //         BgColor = backgroundColor,
+        //     }.Join(MainPanel);
+        //     view.SetSize(100f, 100f);
+        // }
+        //
+        // return;
+
         MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
         {
             Display = Display.Flexbox,
@@ -46,7 +68,7 @@ public class ChatUI : BasicBody
 
         for (var i = 0; i < 10; i++)
         {
-            new SUIMessageItem((i + 1) % 2 == 0).Join(ChatContainer.ListView);
+            new SUIMessageItem((i + 1) % 2 == 0).Join(ChatContainer.MaskView);
         }
 
         // 分界线

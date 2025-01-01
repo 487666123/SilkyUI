@@ -77,7 +77,7 @@ public class SUIScrollbar : View
 
     #region Basic Method
 
-    public void SetSizeForMaskAndTarget(Vector2 maskSize, Vector2 targetSize)
+    public void SetArea(Vector2 maskSize, Vector2 targetSize)
     {
         MaskSize = maskSize;
         TargetSize = targetSize;

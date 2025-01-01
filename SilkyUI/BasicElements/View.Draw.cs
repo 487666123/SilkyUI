@@ -31,7 +31,10 @@ public partial class View
     {
         UpdateAnimationTimer();
         if (TransformMatrixHasChanges) UpdateMatrix();
+
         OnDraw?.Invoke(spriteBatch);
+
+        if (Parent is not View) TrackPositionChange();
 
         if (Parent is not View view || FinalMatrix != view.FinalMatrix)
         {

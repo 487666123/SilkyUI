@@ -94,14 +94,14 @@ public class SUIText : View
 
     public Vector2 TextSize { get; protected set; } = Vector2.Zero;
 
-    protected override CalculatedStyle CalculateOuterDimensions(float left, float top, float width, float height)
+    protected override Vector2 CalculateOuterSize(float width, float height)
     {
         RecalculateText(width <= 0 ? float.MaxValue : width);
 
         if (!SpecifyWidth) width = TextSize.X;
         if (!SpecifyHeight) height = TextSize.Y * TextScale;
 
-        return base.CalculateOuterDimensions(left, top, width, height);
+        return base.CalculateOuterSize(width, height);
     }
 
     protected virtual void RecalculateText(float? width = null)

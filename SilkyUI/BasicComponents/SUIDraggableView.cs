@@ -14,8 +14,8 @@ public class SUIDraggableView : View
     public Color ShadowColor;
     public bool Draggable { get; set; }
     public bool Dragging { get; protected set; }
-    public Vector2 Offset;
-    public Vector2 DragIncrement = new(5f);
+    public Vector2 Offset { get; protected set; }
+    public Vector2 DragIncrement { get; protected set; } = new(5f);
 
     public SUIDraggableView(Color backgroundColor, Color borderColor, float rounded = 12, bool draggable = false)
     {
@@ -24,6 +24,7 @@ public class SUIDraggableView : View
 
         ShadowColor = borderColor * 0.35f;
 
+        Border = 2;
         BorderColor = borderColor;
         BgColor = backgroundColor;
         CornerRadius = new Vector4(rounded);
@@ -60,12 +61,11 @@ public class SUIDraggableView : View
 
     public override void Update(GameTime gameTime)
     {
+        if (!IsMouseHovering) return;
+        PlayerInput.LockVanillaMouseScroll("SilkyUIFramework");
+        Main.LocalPlayer.mouseInterface = true;
+        
         base.Update(gameTime);
-
-        if (IsMouseHovering)
-        {
-            Main.LocalPlayer.mouseInterface = true;
-        }
     }
 
     public override void Draw(SpriteBatch spriteBatch)
@@ -78,6 +78,7 @@ public class SUIDraggableView : View
             if (DragIncrement.Y != 0)
                 y -= y % DragIncrement.Y;
             this.SetPositionPixels(x, y).Recalculate();
+            this.SetPositionPixels(x, y).ApplyPosition(GetStart());
         }
 
         base.Draw(spriteBatch);
@@ -85,12 +86,12 @@ public class SUIDraggableView : View
 
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
-        Vector2 position = GetDimensions().Position();
-        Vector2 size = GetDimensions().Size();
+        var position = GetDimensions().Position();
+        var size = GetDimensions().Size();
 
-        Vector2 shadowThickness = new(ShadowThickness);
-        Vector2 shadowPosition = position - shadowThickness;
-        Vector2 shadowSize = size + shadowThickness * 2;
+        var shadowThickness = new Vector2(ShadowThickness);
+        var shadowPosition = position - shadowThickness;
+        var shadowSize = size + shadowThickness * 2;
 
         if (Shaded)
         {

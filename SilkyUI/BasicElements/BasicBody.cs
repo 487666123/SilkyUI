@@ -23,8 +23,8 @@ public abstract class BasicBody : View
 
     public override void Update(GameTime gameTime)
     {
-        base.Update(gameTime);
         CheckScreenSizeChanges();
+        base.Update(gameTime);
     }
 
     public event Action<Vector2, Vector2> ScreenSizeChanges;

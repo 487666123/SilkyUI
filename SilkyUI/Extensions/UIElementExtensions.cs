@@ -40,7 +40,7 @@ public static class UIElementExtensions
     }
 
     public static UIElement PreviousRelativeElement(this UIElement uie) =>
-        uie.PreviousElement(previous => previous is View { Position: Position.Relative });
+        uie.PreviousElement(previous => previous is View { Positioning: Positioning.Relative });
 
     public static T SetPositionPixels<T>(this T uie, float x, float y) where T : UIElement
     {
@@ -49,105 +49,68 @@ public static class UIElementExtensions
         return uie;
     }
 
-    #region Offset Position
-
-    public static T DimensionsSet<T>(this T uie, Vector2 position) where T : UIElement
-    {
-        uie.DimensionsOffset(position - uie._outerDimensions.Position());
-
-        return uie;
-    }
-
-    public static T DimensionsSetX<T>(this T uie, float position) where T : UIElement
-    {
-        uie.DimensionsOffsetX(position - uie._outerDimensions.X);
-
-        return uie;
-    }
-
-    public static T DimensionsSetY<T>(this T uie, float position) where T : UIElement
-    {
-        uie.DimensionsOffsetY(position - uie._outerDimensions.Y);
-
-        return uie;
-    }
-
-    public static T DimensionsOffsetX<T>(this T uie, float offset) where T : UIElement
-    {
-        uie._outerDimensions.X += offset;
-        uie._dimensions.X += offset;
-        uie._innerDimensions.X += offset;
-
-        uie.Elements.ForEach(element => element.DimensionsOffsetX(offset));
-
-        return uie;
-    }
-
-    public static T DimensionsOffsetY<T>(this T uie, float offset) where T : UIElement
-    {
-        uie._outerDimensions.Y += offset;
-        uie._dimensions.Y += offset;
-        uie._innerDimensions.Y += offset;
-
-        uie.Elements.ForEach(element => element.DimensionsOffsetY(offset));
-
-        return uie;
-    }
-
-    public static T DimensionsOffset<T>(this T uie, Vector2 offset) where T : UIElement
-    {
-        uie._outerDimensions.X += offset.X;
-        uie._outerDimensions.Y += offset.Y;
-
-        uie._dimensions.X += offset.X;
-        uie._dimensions.Y += offset.Y;
-
-        uie._innerDimensions.X += offset.X;
-        uie._innerDimensions.Y += offset.Y;
-
-        uie.Elements.ForEach(element => element.DimensionsOffset(offset));
-
-        return uie;
-    }
-
-    public static T DimensionsOffset<T>(this T uie, float offsetX, float offsetY) where T : UIElement
-    {
-        uie._outerDimensions.X += offsetX;
-        uie._outerDimensions.Y += offsetY;
-
-        uie._dimensions.X += offsetX;
-        uie._dimensions.Y += offsetY;
-
-        uie._innerDimensions.X += offsetX;
-        uie._innerDimensions.Y += offsetY;
-
-        uie.Elements.ForEach(element => element.DimensionsOffset(offsetX, offsetY));
-
-        return uie;
-    }
-
-    #endregion
+    // #region Offset Position
+    //
+    // public static T DimensionsOffsetX<T>(this T uie, float offset) where T : UIElement
+    // {
+    //     uie._outerDimensions.X += offset;
+    //     uie._dimensions.X += offset;
+    //     uie._innerDimensions.X += offset;
+    //
+    //     uie.Elements.ForEach(element => element.DimensionsOffsetX(offset));
+    //
+    //     return uie;
+    // }
+    //
+    // public static T DimensionsOffsetY<T>(this T uie, float offset) where T : UIElement
+    // {
+    //     uie._outerDimensions.Y += offset;
+    //     uie._dimensions.Y += offset;
+    //     uie._innerDimensions.Y += offset;
+    //
+    //     uie.Elements.ForEach(element => element.DimensionsOffsetY(offset));
+    //
+    //     return uie;
+    // }
+    //
+    // public static T DimensionsOffset<T>(this T uie, Vector2 offset) where T : UIElement
+    // {
+    //     uie._outerDimensions.X += offset.X;
+    //     uie._outerDimensions.Y += offset.Y;
+    //
+    //     uie._dimensions.X += offset.X;
+    //     uie._dimensions.Y += offset.Y;
+    //
+    //     uie._innerDimensions.X += offset.X;
+    //     uie._innerDimensions.Y += offset.Y;
+    //
+    //     uie.Elements.ForEach(element => element.DimensionsOffset(offset));
+    //
+    //     return uie;
+    // }
+    //
+    // public static T DimensionsOffset<T>(this T uie, float offsetX, float offsetY) where T : UIElement
+    // {
+    //     uie._outerDimensions.X += offsetX;
+    //     uie._outerDimensions.Y += offsetY;
+    //
+    //     uie._dimensions.X += offsetX;
+    //     uie._dimensions.Y += offsetY;
+    //
+    //     uie._innerDimensions.X += offsetX;
+    //     uie._innerDimensions.Y += offsetY;
+    //
+    //     uie.Elements.ForEach(element => element.DimensionsOffset(offsetX, offsetY));
+    //
+    //     return uie;
+    // }
+    //
+    // #endregion
 
     public static T Join<T>(this T uie, View parent) where T : View
     {
         parent.AppendFromView(uie);
         return uie;
-    }
-
-    public static void RecalculateBubble(this View uie)
-    {
-        var w = !uie.SpecifyWidth;
-        var h = !uie.SpecifyHeight;
-        var view = uie;
-        while (view.Parent is View parent)
-        {
-            if ((w && !view.SpecifyWidth) || (!h && !view.SpecifyHeight))
-            {
-                view = parent;
-            }
-        }
-
-        view.Recalculate();
     }
 
     #region [Margin] [Padding]
