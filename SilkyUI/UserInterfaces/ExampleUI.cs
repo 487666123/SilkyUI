@@ -18,18 +18,13 @@ public class ExampleUI : BasicBody
         var borderColor = new Color(18, 18, 38);
 
         // 面板
-        MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
+        MainPanel = new SUIDraggableView
         {
             Display = Display.Flexbox,
+            Gap = new Vector2(12f),
             FlexDirection = FlexDirection.Column,
             MainAxisAlignment = MainAxisAlignment.Start,
-            Shaded = true,
-            ShadowThickness = 50f,
-            ShadowColor = borderColor * 0.2f,
-            Border = 2f,
-            Gap = new Vector2(12f),
             FinallyDrawBorder = true,
-            CornerRadius = new Vector4(12f, 0f, 12f, 12f),
         }.Join(this);
         MainPanel.HAlign = MainPanel.VAlign = 0.5f;
         MainPanel.SetPadding(12f);

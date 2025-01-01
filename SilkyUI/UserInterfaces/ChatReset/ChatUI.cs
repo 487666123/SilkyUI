@@ -17,37 +17,14 @@ public class ChatUI : BasicBody
         var backgroundColor = new Color(63, 65, 151);
         var borderColor = new Color(18, 18, 38);
 
-        // MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
-        // {
-        //     Display = Display.Flexbox,
-        //     FlexDirection = FlexDirection.Row,
-        //     FlexWrap = true,
-        //     Gap = new Vector2(8f)
-        // }.Join(this);
-        // MainPanel.SetWidth(300f);
-        //
-        // for (var i = 0; i < 5; i++)
-        // {
-        //     var view = new View
-        //     {
-        //         Border = 2,
-        //         BorderColor = borderColor,
-        //         BgColor = backgroundColor,
-        //     }.Join(MainPanel);
-        //     view.SetSize(100f, 100f);
-        // }
-        //
-        // return;
-
-        MainPanel = new SUIDraggableView(backgroundColor * 0.75f, borderColor * 0.75f, draggable: true)
+        MainPanel = new SUIDraggableView
         {
-            Display = Display.Flexbox,
-            FlexDirection = FlexDirection.Column,
+            Display = Display.Flow,
             Shaded = true,
             ShadowThickness = 25f,
             ShadowColor = borderColor * 0.1f,
             Border = 2f,
-            Gap = new Vector2(-1f),
+            Gap = new Vector2(-0.5f),
             FinallyDrawBorder = true,
             CornerRadius = new Vector4(12f),
             Draggable = true,
@@ -58,7 +35,7 @@ public class ChatUI : BasicBody
         MainPanel.VAlign = 1f;
         MainPanel.SetPadding(-1f);
 
-        ChatContainer = new SUIScrollView(ScrollDirection.Vertical)
+        ChatContainer = new SUIScrollView(Direction.Vertical)
         {
             CornerRadius = new Vector4(10f, 10f, 0f, 0f),
             BgColor = Color.White * 0.25f,
@@ -66,9 +43,9 @@ public class ChatUI : BasicBody
         ChatContainer.SetPadding(8f);
         ChatContainer.SetSize(0, 260f, 1f);
 
-        for (var i = 0; i < 10; i++)
+        for (var i = 0; i < 5; i++)
         {
-            new SUIMessageItem((i + 1) % 2 == 0).Join(ChatContainer.MaskView);
+            new SUIMessageItem((i + 1) % 2 == 0).Join(ChatContainer.Container);
         }
 
         // 分界线
@@ -77,7 +54,7 @@ public class ChatUI : BasicBody
             BgColor = borderColor * 0.75f,
             ZIndex = 1f,
         }.Join(MainPanel);
-        br.SetSize(0, 2.5f, 1f);
+        br.SetSize(0, 2f, 1f);
 
         InputContainerInitialize();
     }

@@ -131,7 +131,7 @@ public partial class View
 
     public override void RecalculateChildren() => FlowElements?.ForEach(element => element.Recalculate());
 
-    protected virtual bool GetContentSize(out Vector2 content)
+    public virtual bool GetContentSize(out Vector2 content)
     {
         switch (Display)
         {
@@ -147,8 +147,11 @@ public partial class View
         return content is { X: > 0 } or { Y: > 0 };
     }
 
-    public Vector2 GetFlowSize() =>
-        new(0f, FlowElements.Sum(element => element._outerDimensions.Height + Gap.X) - Gap.X);
+    public Vector2 GetFlowSize()
+    {
+        if (FlowElements is null || FlowElements.Count == 0) return Vector2.Zero;
+        return new Vector2(0f, FlowElements.Sum(element => element._outerDimensions.Height + Gap.X) - Gap.X);
+    }
 
     protected float OuterWidthByContent(float width) =>
         width + this.HMargin() + this.HPadding() + Border * 2;
@@ -176,7 +179,10 @@ public partial class View
     }
 
     protected bool PositionChanged = true;
+
     private Vector2 _position;
+    private Vector2 _offset;
+    private Vector2 _scrollPosition;
 
     protected Vector2 Position
     {
@@ -190,7 +196,17 @@ public partial class View
         }
     }
 
-    private Vector2 _scrollPosition;
+    protected Vector2 Offset
+    {
+        get => _offset;
+        set
+        {
+            if (_offset == value)
+                return;
+            _offset = value;
+            PositionChanged = true;
+        }
+    }
 
     public Vector2 ScrollPosition
     {
@@ -220,8 +236,8 @@ public partial class View
 
     public void ApplyPosition(Vector2 start)
     {
-        _outerDimensions.X = start.X + Position.X;
-        _outerDimensions.Y = start.Y + Position.Y;
+        _outerDimensions.X = start.X + Position.X + Offset.X;
+        _outerDimensions.Y = start.Y + Position.Y + Offset.Y;
 
         _dimensions.X = _outerDimensions.X + MarginLeft;
         _dimensions.Y = _outerDimensions.Y + MarginTop;

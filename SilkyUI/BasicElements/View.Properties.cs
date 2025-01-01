@@ -110,10 +110,10 @@ public partial class View
     /// <summary>
     /// 文档流元素
     /// </summary>
-    protected List<View> FlowElements { get; } = [];
+    protected readonly List<View> FlowElements = [];
 
     /// <summary>
     /// 非文档流元素
     /// </summary>
-    protected List<UIElement> AbsoluteElements { get; } = [];
+    protected readonly List<UIElement> AbsoluteElements = [];
 }

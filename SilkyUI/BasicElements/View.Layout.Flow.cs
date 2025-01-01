@@ -2,14 +2,14 @@
 
 public partial class View
 {
-    public void ReflowFlowLayout()
+    protected virtual void ReflowFlowLayout()
     {
-        var currentTop = -Gap.Y;
+        var currentTop = 0f;
 
         foreach (var element in FlowElements)
         {
-            element.Position += new Vector2(0, currentTop + Gap.Y);
-            currentTop += element._outerDimensions.Height;
+            element.Position += new Vector2(0, currentTop);
+            currentTop += element._outerDimensions.Height + Gap.Y;
         }
     }
 }

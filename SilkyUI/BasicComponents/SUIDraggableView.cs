@@ -14,42 +14,34 @@ public class SUIDraggableView : View
     public Color ShadowColor;
     public bool Draggable { get; set; }
     public bool Dragging { get; protected set; }
-    public Vector2 Offset { get; protected set; }
-    public Vector2 DragIncrement { get; protected set; } = new(5f);
+    public Vector2 DragIncrement { get; set; } = Vector2.Zero;
+    public Vector2 DragOffset { get; set; } = Vector2.Zero;
 
-    public SUIDraggableView(Color backgroundColor, Color borderColor, float rounded = 12, bool draggable = false)
+    public SUIDraggableView(bool draggable = true)
     {
-        SetPadding(10f);
         Draggable = draggable;
-
-        ShadowColor = borderColor * 0.35f;
 
         Border = 2;
-        BorderColor = borderColor;
-        BgColor = backgroundColor;
-        CornerRadius = new Vector4(rounded);
-    }
+        BorderColor = new Color(18, 18, 38) * 0.75f;
+        BgColor = new Color(63, 65, 151) * 0.75f;
+        CornerRadius = new Vector4(12);
 
-    public SUIDraggableView(Color backgroundColor, Color borderColor, Vector4 cornerRadius, bool draggable = false)
-    {
+        ShadowColor = new Color(18, 18, 38) * 0.1f;
+        Shaded = true;
+        ShadowThickness = 50f;
+
         SetPadding(10f);
-        ShadowColor = borderColor * 0.35f;
-        Draggable = draggable;
-
-        BorderColor = borderColor;
-        BgColor = backgroundColor;
-        CornerRadius = cornerRadius;
     }
 
     public override void LeftMouseDown(UIMouseEvent evt)
     {
         base.LeftMouseDown(evt);
 
-        // 当点击的是子元素不进行移动
         if (!Draggable ||
             (evt.Target != this && evt.Target is not View { DragIgnore: true } &&
              !evt.Target.GetType().IsAssignableFrom(typeof(UIElement)))) return;
-        Offset = evt.MousePosition - new Vector2(Left.Pixels, Top.Pixels);
+
+        DragOffset = new Vector2(Main.mouseX, Main.mouseY) - Offset;
         Dragging = true;
     }
 
@@ -61,10 +53,14 @@ public class SUIDraggableView : View
 
     public override void Update(GameTime gameTime)
     {
-        if (!IsMouseHovering) return;
-        PlayerInput.LockVanillaMouseScroll("SilkyUIFramework");
-        Main.LocalPlayer.mouseInterface = true;
-        
+        if (IsMouseHovering)
+        {
+            // 锁定滚动条
+            PlayerInput.LockVanillaMouseScroll("SilkyUserInterfaceFramework");
+            // 锁定鼠标操作
+            Main.LocalPlayer.mouseInterface = true;
+        }
+
         base.Update(gameTime);
     }
 
@@ -72,13 +68,11 @@ public class SUIDraggableView : View
     {
         if (Dragging)
         {
-            var (x, y) = (Main.mouseX - Offset.X, Main.mouseY - Offset.Y);
-            if (DragIncrement.X != 0)
-                x -= x % DragIncrement.X;
-            if (DragIncrement.Y != 0)
-                y -= y % DragIncrement.Y;
-            this.SetPositionPixels(x, y).Recalculate();
-            this.SetPositionPixels(x, y).ApplyPosition(GetStart());
+            var x = Main.mouseX - DragOffset.X;
+            var y = Main.mouseY - DragOffset.Y;
+            if (DragIncrement.X != 0) x -= x % DragIncrement.X;
+            if (DragIncrement.Y != 0) y -= y % DragIncrement.Y;
+            Offset = new Vector2(x, y);
         }
 
         base.Draw(spriteBatch);
