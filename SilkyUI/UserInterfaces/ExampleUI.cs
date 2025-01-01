@@ -25,25 +25,20 @@ public class ExampleUI : BasicBody
             FlexDirection = FlexDirection.Column,
             MainAxisAlignment = MainAxisAlignment.Start,
             FinallyDrawBorder = true,
+            DragIncrement = new Vector2(5f)
         }.Join(this);
-        MainPanel.HAlign = MainPanel.VAlign = 0.5f;
         MainPanel.SetPadding(12f);
 
-        var container1 = new View
+        var container1 = new SUIScrollView(Direction.Horizontal)
         {
-            BgColor = Color.Black * 0.25f, // 背景颜色
-            Display = Display.Flexbox, // Flex 布局
-            FlexDirection = FlexDirection.Row, // 主轴方向为: 行 
-            MainAxisAlignment = MainAxisAlignment.Center, // 主轴 自结尾向前排列
-            CrossAxisAlignment = CrossAxisAlignment.Center, // 交叉轴 居中
-            Gap = new Vector2(12f), // 子元素间距
-            Border = 2, // 边框宽度
-            BorderColor = Color.Black * 0.75f, // 边框颜色
-            CornerRadius = new Vector4(12f, 4f, 4f, 12f), // 圆角
             OverflowHidden = true,
+            CornerRadius = new Vector4(12f),
+            Border = 2,
+            BorderColor = Color.Black * 0.75f,
+            BgColor = Color.Black * 0.25f,
             FlexWrap = true,
         }.Join(MainPanel);
-        container1.SetWidth(500f);
+        container1.SetSize(500f, 200f);
         container1.SetPadding(12f); // 内边距
 
         // RoshanBadges = [489, 490, 491, 2998]
@@ -59,13 +54,17 @@ public class ExampleUI : BasicBody
                 ImagePercent = new Vector2(0.5f),
                 ImageOrigin = new Vector2(0.5f),
             };
+            img.OnLeftMouseDown += (_, _) =>
+            {
+                container1.Recalculate();
+            };
             img.SetSize(42f, 42f);
             img.SetPadding(12f);
             img.OnDraw += _ =>
                 ScalingAnimationUsingMatrix(img, img.HoverTimer, 0.1f);
             if (type == 1) img.OnLeftMouseDown += (_, _) => IsEnabled = false;
 
-            container1.AppendFromView(img);
+            container1.Container.AppendFromView(img);
         }
 
         var container2 = new View
@@ -127,7 +126,7 @@ public class ExampleUI : BasicBody
 
     public override void Draw(SpriteBatch spriteBatch)
     {
-        UseRenderTarget = true;
+        UseRenderTarget = false;
         HoverTimer.Speed = 10f;
         Opacity = MainPanel.HoverTimer.Lerp(0.75f, 1f);
         base.Draw(spriteBatch);

@@ -19,18 +19,18 @@ public class SUIScrollView : View
         Direction = direction;
 
         Display = Display.Flexbox;
-        FlexDirection = FlexDirection.Row;
+        FlexWrap = false;
         Gap = new Vector2(8f);
 
         Container = new View
         {
             OverflowHidden = true,
             Display = Display.Flexbox,
-            FlexDirection = FlexDirection.Column,
             Gap = new Vector2(8f),
-            FlexWrap = false,
+            FlexDirection = FlexDirection.Column,
+            MainAxisAlignment = MainAxisAlignment.SpaceBetween,
+            FlexWrap = true,
         }.Join(this);
-        Container.SetSize(-16f, 0, 1f, 1f);
 
 
         ScrollBar = new SUIScrollbar(Container)
@@ -43,10 +43,14 @@ public class SUIScrollView : View
         switch (Direction)
         {
             case Direction.Horizontal:
+                FlexDirection = FlexDirection.Column;
+                Container.SetSize(0, -16f, 1f, 1f);
                 ScrollBar.SetSize(0f, 8f, 1f, 0f);
                 break;
             default:
             case Direction.Vertical:
+                FlexDirection = FlexDirection.Row;
+                Container.SetSize(-16f, 0, 1f, 1f);
                 ScrollBar.SetSize(8f, 0f, 0f, 1f);
                 break;
         }

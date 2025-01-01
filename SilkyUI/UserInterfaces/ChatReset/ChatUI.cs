@@ -28,11 +28,9 @@ public class ChatUI : BasicBody
             FinallyDrawBorder = true,
             CornerRadius = new Vector4(12f),
             Draggable = true,
+            DragIncrement = new Vector2(5f)
         }.Join(this);
         MainPanel.SetWidth(500f);
-        MainPanel.Left.Pixels = 80f;
-        MainPanel.Top.Pixels = -10f;
-        MainPanel.VAlign = 1f;
         MainPanel.SetPadding(-1f);
 
         ChatContainer = new SUIScrollView(Direction.Vertical)
@@ -100,11 +98,13 @@ public class ChatUI : BasicBody
 
     public override void Draw(SpriteBatch spriteBatch)
     {
+        UseRenderTarget = false;
+        
         MainPanel.HoverTimer.Speed = 15f;
         Opacity = MainPanel.HoverTimer.Lerp(0f, 1f);
 
         var offset = MainPanel.HoverTimer.Lerp(20f, 0f);
-        MainPanel.TransformMatrix = Matrix.CreateTranslation(0, offset, 0f);
+        MainPanel.TransformMatrix = Matrix.CreateTranslation(0, 0f, 0f);
 
         base.Draw(spriteBatch);
     }

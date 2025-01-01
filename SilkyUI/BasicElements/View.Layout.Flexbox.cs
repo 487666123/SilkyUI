@@ -160,13 +160,16 @@ public partial class View
 
         FlexItem flexItem;
 
+        var firstElement = FlowElements[0];
         FlexItems.Add(flexItem = new FlexItem());
-        flexItem.Add(FlowElements[0]);
-        flexItem.Width = FlowElements[0]._outerDimensions.Width;
-        flexItem.Height = FlowElements[0]._outerDimensions.Height;
+        flexItem.Add(firstElement);
+        flexItem.Width = firstElement._outerDimensions.Width;
+        flexItem.Height = firstElement._outerDimensions.Height;
 
         // 不换行
-        if (!FlexWrap)
+        if (!FlexWrap
+            || (FlexDirection is FlexDirection.Row && !SpecifyWidth)
+            || (FlexDirection is FlexDirection.Column && !SpecifyHeight))
         {
             switch (FlexDirection)
             {
