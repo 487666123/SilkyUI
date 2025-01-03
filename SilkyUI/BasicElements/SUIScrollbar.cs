@@ -161,11 +161,9 @@ public class SUIScrollbar : View
     /// <summary> 直接设置滚动位置 </summary>
     public void SetScrollPosition(Vector2 position)
     {
-        position = Vector2.Clamp(position, Vector2.Zero, GetScrollRange());
-
+        CurrentScrollPosition = position;
         StartScrollPosition = position;
         TargetScrollPosition = position;
-        CurrentScrollPosition = position;
     }
 
     public bool BarContainsPoint()

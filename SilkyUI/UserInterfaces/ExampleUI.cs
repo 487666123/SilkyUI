@@ -64,7 +64,7 @@ public class ExampleUI : BasicBody
                 ScalingAnimationUsingMatrix(img, img.HoverTimer, 0.1f);
             if (type == 1) img.OnLeftMouseDown += (_, _) => IsEnabled = false;
 
-            scrollView.Container.AppendFromView(img);
+            scrollView.AppendFromView(img);
         }
 
         var container2 = new View

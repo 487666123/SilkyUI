@@ -88,7 +88,7 @@ public class ChatUI : BasicBody
             MinHeight = { Percent = 1f },
             PaddingLeft = 2f,
             PaddingRight = 2f,
-        }.Join(inputContainer.Container);
+        }.Join(inputContainer);
         input.OnTextChanged += () =>
         {
             inputContainer.Recalculate();
@@ -110,11 +110,7 @@ public class ChatUI : BasicBody
         }.Join(ActiveBarContainer);
         clearButton.SetPadding(-1f);
         clearButton.SetSize(70f, 0f, 0f, 1f);
-        clearButton.OnLeftMouseDown += (_, _) =>
-        {
-            ChatContainer?.Container?.RemoveAllChildren();
-            ChatContainer?.Recalculate();
-        };
+        clearButton.OnLeftMouseDown += (_, _) => { ChatContainer?.RemoveAllChildren(); };
 
         var send = new SUIText
         {
@@ -135,12 +131,12 @@ public class ChatUI : BasicBody
     {
         if (ChatContainer.Container != null)
         {
-            var count = ChatContainer.Container.Children.Count() - 50;
+            var count = ChatContainer.Container.Children.Count() - 100;
             if (count > 0)
             {
                 for (var i = 0; i < count; i++)
                 {
-                    ChatContainer.Container.Children.First().Remove();
+                    ChatContainer.Container.Children.First()?.Remove();
                 }
 
                 ChatContainer.Recalculate();
@@ -152,7 +148,7 @@ public class ChatUI : BasicBody
         var message = input.Text;
         input.Text = string.Empty;
         new MessageComp(sender, message, true)
-            .Join(ChatContainer.Container);
+            .Join(ChatContainer);
 
         ChatContainer.Recalculate();
         ChatContainer.ScrollBar.ScrollByEnd();

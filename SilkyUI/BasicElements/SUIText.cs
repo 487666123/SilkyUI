@@ -107,24 +107,20 @@ public class SUIText : View
         return content;
     }
 
-    public virtual string GetOrigianlText()
-    {
-        return LastText;
-    }
-
     protected virtual void RecalculateText()
     {
         LastText = Text;
         LastMaxWidth = SpecifyWidth ? _innerDimensions.Width : 114514f;
 
-        var origianlText = GetOrigianlText();
+        var origianlText = LastText;
 
         // 是否换行
-        if (_wordWrap)
+        if (WordWrap)
         {
             var maxWidth = LastMaxWidth / TextScale;
-            TextSnippetHelper.WordwrapString
-                (FinalSnippets, origianlText, TextColor, Font, maxWidth, MaxWordLength, MaxLines);
+            var original =
+                TextSnippetHelper.ConvertNormalSnippets(TextSnippetHelper.ParseMessage(origianlText, TextColor));
+            TextSnippetHelper.WordwrapString(original, FinalSnippets, TextColor, Font, maxWidth, MaxWordLength, -1);
         }
         else
         {

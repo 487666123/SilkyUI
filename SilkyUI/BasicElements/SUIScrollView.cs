@@ -2,11 +2,30 @@
 
 namespace SilkyUI.BasicElements;
 
+public class SUIScrollContainer : View
+{
+    public SUIScrollContainer()
+    {
+        OverflowHidden = true;
+    }
+
+    public override View AppendFromView(View child)
+    {
+        child.Remove();
+        child.Parent = this;
+        Elements.Add(child);
+        if (Parent is SUIScrollView sUIScrollView)
+            sUIScrollView.Recalculate();
+        else Recalculate();
+        return this;
+    }
+}
+
 public class SUIScrollView : View
 {
     public readonly Direction Direction;
 
-    public readonly View Container;
+    public readonly SUIScrollContainer Container;
     public readonly SUIScrollbar ScrollBar;
 
     public SUIScrollView(Direction direction)
@@ -17,15 +36,13 @@ public class SUIScrollView : View
         FlexWrap = false;
         Gap = new Vector2(8f);
 
-        Container = new View
+        Container = new SUIScrollContainer()
         {
-            OverflowHidden = true,
             Display = Display.Flexbox,
             Gap = new Vector2(8f),
             MainAxisAlignment = MainAxisAlignment.SpaceBetween,
             FlexWrap = true,
         }.Join(this);
-
 
         ScrollBar = new SUIScrollbar(direction, Container)
         {
@@ -86,5 +103,12 @@ public class SUIScrollView : View
         }
 
         base.ScrollWheel(evt);
+    }
+
+    public override View AppendFromView(View child)
+    {
+        return child is SUIScrollbar or SUIScrollContainer
+            ? base.AppendFromView(child)
+            : Container?.AppendFromView(child);
     }
 }

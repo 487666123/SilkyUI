@@ -12,9 +12,29 @@ public class SUIEditText : SUIText
         DragIgnore = false;
     }
 
-    public override string GetOrigianlText()
+    protected override void RecalculateText()
     {
-        return base.GetOrigianlText() + "[c/ffffff:|]";
+        LastText = Text;
+        LastMaxWidth = SpecifyWidth ? _innerDimensions.Width : 114514f;
+
+        var origianlText = LastText;
+
+        // 是否换行
+        if (WordWrap)
+        {
+            var maxWidth = LastMaxWidth / TextScale;
+            var original =
+                TextSnippetHelper.ConvertNormalSnippets(TextSnippetHelper.ParseMessage(origianlText, TextColor));
+            original.Add(new PlainSnippet("|"));
+            TextSnippetHelper.WordwrapString(original, FinalSnippets, TextColor, Font, maxWidth, MaxWordLength);
+        }
+        else
+        {
+            TextSnippetHelper.ConvertNormalSnippets
+                (TextSnippetHelper.ParseMessage(origianlText, TextColor), FinalSnippets);
+        }
+
+        TextSize = ChatManager.GetStringSize(Font, FinalSnippets.ToArray(), new Vector2(1f));
     }
 
     protected override void DrawText(SpriteBatch spriteBatch, List<TextSnippet> textSnippets)
