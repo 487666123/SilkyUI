@@ -1,6 +1,7 @@
 ﻿using OneOf;
 using SilkyUI.Animation;
 using SilkyUI.BasicComponents;
+using SilkyUI.Core;
 
 namespace SilkyUI.UserInterfaces;
 
@@ -10,7 +11,10 @@ public class ExampleUI : BasicBody
     public SUIDraggableView MainPanel { get; private set; }
 
     private static readonly int[] RoshanBadges =
-        [1, 4, 6, 7, 10, 489, 490, 491, 2998, 1, 4, 6, 7, 10, 489, 490, 491, 2998];
+    [
+        1, 4, 6, 7, 10, 489, 490, 491, 2998, 1, 4, 6, 7, 10, 489, 490, 491, 2998,
+        1, 4, 6, 7, 10, 489, 490, 491, 2998, 1, 4, 6, 7, 10, 489, 490, 491, 2998
+    ];
 
     public override void OnInitialize()
     {
@@ -21,7 +25,7 @@ public class ExampleUI : BasicBody
         MainPanel = new SUIDraggableView
         {
             Display = Display.Flexbox,
-            Gap = new Vector2(12f),
+            Gap = new Vector2(20f),
             FlexDirection = FlexDirection.Column,
             MainAxisAlignment = MainAxisAlignment.Start,
             FinallyDrawBorder = true,
@@ -29,17 +33,16 @@ public class ExampleUI : BasicBody
         }.Join(this);
         MainPanel.SetPadding(12f);
 
-        var container1 = new SUIScrollView(Direction.Horizontal)
+        var scrollView = new SUIScrollView(Direction.Vertical)
         {
             OverflowHidden = true,
             CornerRadius = new Vector4(12f),
             Border = 2,
-            BorderColor = Color.Black * 0.75f,
-            BgColor = Color.Black * 0.25f,
-            FlexWrap = true,
+            BorderColor = Color.Black * 0.25f,
+            BgColor = Color.Black * 0.1f,
         }.Join(MainPanel);
-        container1.SetSize(500f, 200f);
-        container1.SetPadding(12f); // 内边距
+        scrollView.SetSize(500f, 200f);
+        scrollView.SetPadding(12f);
 
         // RoshanBadges = [489, 490, 491, 2998]
         foreach (var type in RoshanBadges)
@@ -54,22 +57,20 @@ public class ExampleUI : BasicBody
                 ImagePercent = new Vector2(0.5f),
                 ImageOrigin = new Vector2(0.5f),
             };
-            img.OnLeftMouseDown += (_, _) =>
-            {
-                container1.Recalculate();
-            };
+            img.OnLeftMouseDown += (_, _) => { scrollView.Recalculate(); };
             img.SetSize(42f, 42f);
             img.SetPadding(12f);
             img.OnDraw += _ =>
                 ScalingAnimationUsingMatrix(img, img.HoverTimer, 0.1f);
             if (type == 1) img.OnLeftMouseDown += (_, _) => IsEnabled = false;
 
-            container1.Container.AppendFromView(img);
+            scrollView.Container.AppendFromView(img);
         }
 
         var container2 = new View
         {
-            Display = Display.Flexbox,
+            Name = "Container",
+            Display = Display.None,
             FlexDirection = FlexDirection.Row,
             MainAxisAlignment = MainAxisAlignment.SpaceEvenly,
             BgColor = Color.Black * 0.25f,

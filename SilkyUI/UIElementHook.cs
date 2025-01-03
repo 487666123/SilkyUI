@@ -1,4 +1,4 @@
-﻿namespace SilkyUI.Core;
+﻿namespace SilkyUI;
 
 public class UIElementHook : ModSystem
 {

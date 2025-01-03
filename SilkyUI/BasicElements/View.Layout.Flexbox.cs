@@ -41,7 +41,7 @@ public enum FlexDirection
 
 public partial class View
 {
-    #region Flex Properties
+    #region Flexbox 属性
 
     /// <summary> 主轴对齐方式 </summary>
     public MainAxisAlignment MainAxisAlignment { get; set; } = MainAxisAlignment.Start;
@@ -52,21 +52,245 @@ public partial class View
     /// <summary> Flex 布局方向 </summary>
     public FlexDirection FlexDirection { get; set; } = FlexDirection.Row;
 
+    /// <summary> 是否换行 </summary>
     public bool FlexWrap { get; set; } = true;
-
-    /// <summary>
-    /// Flexbox 占用剩余空间分数<br/>
-    /// 如果使用, 主轴方向上的大小将会不生效, 转而由 FlexFraction 控制
-    /// </summary>
-    public bool UseFlexFraction { get; set; }
-
-    public float FlexFraction { get; set; }
-
-    public int MaxMainAxisElementCount { get; set; }
 
     #endregion
 
-    private void FlexboxHPlacement(List<View> elements, float start, float gap, float cross = 0f)
+    public Vector2 GetFlexboxSize()
+    {
+        if (FlexboxItems is null || FlexboxItems.Count == 0) return Vector2.Zero;
+
+        switch (FlexDirection)
+        {
+            default:
+            case FlexDirection.Row:
+                return new Vector2(FlexboxItems.Max(item => item.Width),
+                    FlexboxItems.Sum(item => item.Height + Gap.Y) - Gap.Y);
+            case FlexDirection.Column:
+                return new Vector2(FlexboxItems.Sum(item => item.Width + Gap.X) - Gap.X,
+                    FlexboxItems.Max(item => item.Height));
+        }
+    }
+
+    protected readonly List<FlexboxItem> FlexboxItems = [];
+
+    /// <summary>
+    /// 组织 Flexbox 项目: 分行分列
+    /// </summary>
+    protected void OrganizingFlexboxItems()
+    {
+        FlexboxItems.Clear();
+        if (Display is not Display.Flexbox || FlowElements.Count == 0) return;
+
+        FlexboxItem flexboxItem;
+
+        var firstElement = FlowElements[0];
+        FlexboxItems.Add(flexboxItem = new FlexboxItem());
+        flexboxItem.Add(firstElement);
+        flexboxItem.Width = firstElement._outerDimensions.Width;
+        flexboxItem.Height = firstElement._outerDimensions.Height;
+
+        // 不换行
+        if (!FlexWrap || (FlexDirection is FlexDirection.Row && !SpecifyWidth) ||
+            (FlexDirection is FlexDirection.Column && !SpecifyHeight))
+        {
+            switch (FlexDirection)
+            {
+                default:
+                case FlexDirection.Row:
+                    for (var i = 1; i < FlowElements.Count; i++)
+                    {
+                        var element = FlowElements[i];
+
+                        flexboxItem.Width += element._outerDimensions.Width + Gap.X;
+                        flexboxItem.Height = Math.Max(flexboxItem.Height, element._outerDimensions.Height);
+
+                        flexboxItem.Add(element);
+                    }
+
+                    return;
+                case FlexDirection.Column:
+                    for (var i = 1; i < FlowElements.Count; i++)
+                    {
+                        var element = FlowElements[i];
+
+                        flexboxItem.Height += element._outerDimensions.Height + Gap.Y;
+                        flexboxItem.Width = Math.Max(flexboxItem.Width, element._outerDimensions.Width);
+
+                        flexboxItem.Add(element);
+                    }
+
+                    return;
+            }
+        }
+
+        // 换行
+        switch (FlexDirection)
+        {
+            default:
+            case FlexDirection.Row:
+                var maxWidth = SpecifyWidth ? _innerDimensions.Width : float.MaxValue;
+
+                for (var i = 1; i < FlowElements.Count; i++)
+                {
+                    var element = FlowElements[i];
+
+                    if (flexboxItem.Width + element._outerDimensions.Width + Gap.X > maxWidth)
+                    {
+                        FlexboxItems.Add(flexboxItem = new FlexboxItem());
+                        flexboxItem.Width = element._outerDimensions.Width;
+                    }
+                    else flexboxItem.Width += element._outerDimensions.Width + Gap.X;
+
+                    flexboxItem.Height = Math.Max(flexboxItem.Height, element._outerDimensions.Height);
+                    flexboxItem.Add(element);
+                }
+
+                break;
+            case FlexDirection.Column:
+                var maxHeight = SpecifyHeight ? _innerDimensions.Height : float.MaxValue;
+
+                for (var i = 1; i < FlowElements.Count; i++)
+                {
+                    var element = FlowElements[i];
+
+                    if (flexboxItem.Height + element._outerDimensions.Height + Gap.Y > maxHeight)
+                    {
+                        FlexboxItems.Add(flexboxItem = new FlexboxItem());
+                        flexboxItem.Height += element._outerDimensions.Height;
+                    }
+                    else flexboxItem.Height += element._outerDimensions.Height + Gap.Y;
+
+                    flexboxItem.Width = Math.Max(flexboxItem.Width, element._outerDimensions.Width);
+                    flexboxItem.Add(element);
+                }
+
+                break;
+        }
+    }
+
+    protected virtual void FlexboxArrange()
+    {
+        float gap;
+        var crossAxis = 0f;
+        switch (FlexDirection)
+        {
+            default:
+            case FlexDirection.Row:
+                if (!SpecifyWidth) FlexboxHArrange(FlowElements, 0f, Gap.X);
+                else
+                    switch (MainAxisAlignment)
+                    {
+                        default:
+                        case MainAxisAlignment.Start:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                FlexboxHArrange(flexItem.Elements, 0f, Gap.X, crossAxis);
+                                crossAxis += flexItem.Height + Gap.Y;
+                            }
+
+                            break;
+                        case MainAxisAlignment.End:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                FlexboxHArrange(flexItem.Elements,
+                                    _innerDimensions.Width - flexItem.Width, Gap.X, crossAxis);
+                                crossAxis += flexItem.Height + Gap.Y;
+                            }
+
+                            break;
+                        case MainAxisAlignment.Center:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                FlexboxHArrange(flexItem.Elements,
+                                    (_innerDimensions.Width - flexItem.Width) / 2f, Gap.X, crossAxis);
+                                crossAxis += flexItem.Height + Gap.Y;
+                            }
+
+                            break;
+                        case MainAxisAlignment.SpaceEvenly:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Width);
+                                gap = (_innerDimensions.Width - sum) / (flexItem.Elements.Count + 1);
+                                FlexboxHArrange(flexItem.Elements, gap, gap, crossAxis);
+                                crossAxis += flexItem.Height + Gap.Y;
+                            }
+
+                            break;
+                        case MainAxisAlignment.SpaceBetween:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Width);
+                                gap = (_innerDimensions.Width - sum) / (flexItem.Elements.Count - 1);
+                                FlexboxHArrange(flexItem.Elements, 0f, gap, crossAxis);
+                                crossAxis += flexItem.Height + Gap.Y;
+                            }
+
+                            break;
+                    }
+
+                break;
+            case FlexDirection.Column:
+                if (!SpecifyHeight) FlexboxVArrange(FlowElements, 0f, Gap.Y);
+                else
+                    switch (MainAxisAlignment)
+                    {
+                        default:
+                        case MainAxisAlignment.Start:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                FlexboxVArrange(flexItem.Elements, 0f, Gap.Y, crossAxis);
+                                crossAxis += flexItem.Width + Gap.X;
+                            }
+
+                            break;
+                        case MainAxisAlignment.End:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                FlexboxVArrange(flexItem.Elements,
+                                    _innerDimensions.Height - flexItem.Height, Gap.Y, crossAxis);
+                                crossAxis += flexItem.Width + Gap.X;
+                            }
+
+                            break;
+                        case MainAxisAlignment.Center:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                FlexboxVArrange(flexItem.Elements,
+                                    (_innerDimensions.Height - flexItem.Height) / 2f, Gap.Y, crossAxis);
+                                crossAxis += flexItem.Width + Gap.X;
+                            }
+
+                            break;
+                        case MainAxisAlignment.SpaceEvenly:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Height);
+                                gap = (_innerDimensions.Height - sum) / (flexItem.Elements.Count + 1);
+                                FlexboxVArrange(flexItem.Elements, gap, gap, crossAxis);
+                                crossAxis += flexItem.Width + Gap.X;
+                            }
+
+                            break;
+                        case MainAxisAlignment.SpaceBetween:
+                            foreach (var flexItem in FlexboxItems)
+                            {
+                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Height);
+                                gap = (_innerDimensions.Height - sum) / (flexItem.Elements.Count - 1);
+                                FlexboxVArrange(flexItem.Elements, 0f, gap, crossAxis);
+                                crossAxis += flexItem.Width + Gap.X;
+                            }
+
+                            break;
+                    }
+
+                break;
+        }
+    }
+
+    private void FlexboxHArrange(List<View> elements, float mainAxis, float gap, float crossAxis = 0f)
     {
         if (elements is null || elements.Count == 0) return;
 
@@ -74,7 +298,7 @@ public partial class View
 
         foreach (var element in elements)
         {
-            var offsetY = cross;
+            var offsetY = crossAxis;
             switch (CrossAxisAlignment)
             {
                 default:
@@ -89,12 +313,12 @@ public partial class View
                     break;
             }
 
-            element.Position += new Vector2(start, offsetY);
-            start += element._outerDimensions.Width + gap;
+            element.Position += new Vector2(mainAxis, offsetY);
+            mainAxis += element._outerDimensions.Width + gap;
         }
     }
 
-    private void FlexboxVPlacement(List<View> elements, float start, float gap, float cross = 0f)
+    private void FlexboxVArrange(List<View> elements, float mainAxis, float gap, float crossAxis = 0f)
     {
         if (elements is null || elements.Count == 0) return;
 
@@ -102,7 +326,7 @@ public partial class View
 
         foreach (var element in elements)
         {
-            var offsetX = cross;
+            var offsetX = crossAxis;
             switch (CrossAxisAlignment)
             {
                 default:
@@ -117,254 +341,8 @@ public partial class View
                     break;
             }
 
-            element.Position += new Vector2(offsetX, start);
-            start += element._outerDimensions.Height + gap;
-        }
-    }
-
-    public Vector2 GetFlexboxSize()
-    {
-        if (FlexItems is null || FlexItems.Count == 0) return Vector2.Zero;
-
-        switch (FlexDirection)
-        {
-            default:
-            case FlexDirection.Row:
-                return new Vector2(FlexItems.Max(item => item.Width),
-                    FlexItems.Sum(item => item.Height + Gap.Y) - Gap.Y);
-            case FlexDirection.Column:
-                return new Vector2(FlexItems.Sum(item => item.Width + Gap.X) - Gap.X,
-                    FlexItems.Max(item => item.Height));
-        }
-    }
-
-    public class FlexItem
-    {
-        public readonly List<View> Elements = [];
-        public float Width { get; set; }
-        public float Height { get; set; }
-
-        public void Add(View element)
-        {
-            Elements.Add(element);
-        }
-    }
-
-    protected readonly List<FlexItem> FlexItems = [];
-
-    protected void ProcessFlexItems()
-    {
-        if (Display is not Display.Flexbox || FlowElements.Count == 0) return;
-
-        FlexItems.Clear();
-
-        FlexItem flexItem;
-
-        var firstElement = FlowElements[0];
-        FlexItems.Add(flexItem = new FlexItem());
-        flexItem.Add(firstElement);
-        flexItem.Width = firstElement._outerDimensions.Width;
-        flexItem.Height = firstElement._outerDimensions.Height;
-
-        // 不换行
-        if (!FlexWrap
-            || (FlexDirection is FlexDirection.Row && !SpecifyWidth)
-            || (FlexDirection is FlexDirection.Column && !SpecifyHeight))
-        {
-            switch (FlexDirection)
-            {
-                default:
-                case FlexDirection.Row:
-                    for (var i = 1; i < FlowElements.Count; i++)
-                    {
-                        var element = FlowElements[i];
-
-                        flexItem.Width += element._outerDimensions.Width + Gap.X;
-                        flexItem.Height = Math.Max(flexItem.Height, element._outerDimensions.Height);
-
-                        flexItem.Add(element);
-                    }
-
-                    break;
-                case FlexDirection.Column:
-                    for (var i = 1; i < FlowElements.Count; i++)
-                    {
-                        var element = FlowElements[i];
-
-                        flexItem.Height += element._outerDimensions.Height + Gap.Y;
-                        flexItem.Width = Math.Max(flexItem.Width, element._outerDimensions.Width);
-
-                        flexItem.Add(element);
-                    }
-
-                    break;
-            }
-
-            return;
-        }
-
-        // 换行
-        switch (FlexDirection)
-        {
-            default:
-            case FlexDirection.Row:
-                var maxWidth = SpecifyWidth ? _innerDimensions.Width : float.MaxValue;
-
-                for (var i = 1; i < FlowElements.Count; i++)
-                {
-                    var element = FlowElements[i];
-
-                    if (flexItem.Width + element._outerDimensions.Width + Gap.X > maxWidth)
-                    {
-                        FlexItems.Add(flexItem = new FlexItem());
-                        flexItem.Width = element._outerDimensions.Width;
-                    }
-                    else flexItem.Width += element._outerDimensions.Width + Gap.X;
-
-                    flexItem.Height = Math.Max(flexItem.Height, element._outerDimensions.Height);
-                    flexItem.Add(element);
-                }
-
-                break;
-            case FlexDirection.Column:
-                var maxHeight = SpecifyHeight ? _innerDimensions.Height : float.MaxValue;
-
-                for (var i = 1; i < FlowElements.Count; i++)
-                {
-                    var element = FlowElements[i];
-
-                    if (flexItem.Height + element._outerDimensions.Height + Gap.Y > maxHeight)
-                    {
-                        FlexItems.Add(flexItem = new FlexItem());
-                        flexItem.Height += element._outerDimensions.Height;
-                    }
-                    else flexItem.Height += element._outerDimensions.Height + Gap.Y;
-
-                    flexItem.Width = Math.Max(flexItem.Width, element._outerDimensions.Width);
-                    flexItem.Add(element);
-                }
-
-                break;
-        }
-    }
-
-    protected virtual void ReflowFlexLayout()
-    {
-        float gap;
-        var currentCross = 0f;
-        switch (FlexDirection)
-        {
-            default:
-            case FlexDirection.Row:
-                if (!SpecifyWidth) FlexboxHPlacement(FlowElements, 0f, Gap.X);
-                else
-                    switch (MainAxisAlignment)
-                    {
-                        default:
-                        case MainAxisAlignment.Start:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                FlexboxHPlacement(flexItem.Elements, 0f, Gap.X, currentCross);
-                                currentCross += flexItem.Height + Gap.Y;
-                            }
-
-                            break;
-                        case MainAxisAlignment.End:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                FlexboxHPlacement(flexItem.Elements,
-                                    _innerDimensions.Width - flexItem.Width, Gap.X, currentCross);
-                                currentCross += flexItem.Height + Gap.Y;
-                            }
-
-                            break;
-                        case MainAxisAlignment.Center: // Center
-                            foreach (var flexItem in FlexItems)
-                            {
-                                FlexboxHPlacement(flexItem.Elements,
-                                    (_innerDimensions.Width - flexItem.Width) / 2f, Gap.X, currentCross);
-                                currentCross += flexItem.Height + Gap.Y;
-                            }
-
-                            break;
-                        case MainAxisAlignment.SpaceEvenly:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Width);
-                                gap = (_innerDimensions.Width - sum) / (flexItem.Elements.Count + 1);
-                                FlexboxHPlacement(flexItem.Elements, gap, gap, currentCross);
-                                currentCross += flexItem.Height + Gap.Y;
-                            }
-
-                            break;
-                        case MainAxisAlignment.SpaceBetween:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Width);
-                                gap = (_innerDimensions.Width - sum) / (flexItem.Elements.Count - 1);
-                                FlexboxHPlacement(flexItem.Elements, 0f, gap, currentCross);
-                                currentCross += flexItem.Height + Gap.Y;
-                            }
-
-                            break;
-                    }
-
-                break;
-            case FlexDirection.Column:
-                if (!SpecifyHeight) FlexboxVPlacement(FlowElements, 0f, Gap.Y);
-                else
-                    switch (MainAxisAlignment)
-                    {
-                        default:
-                        case MainAxisAlignment.Start:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                FlexboxVPlacement(flexItem.Elements, 0f, Gap.Y, currentCross);
-                                currentCross += flexItem.Width + Gap.X;
-                            }
-
-                            break;
-                        case MainAxisAlignment.End:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                FlexboxVPlacement(flexItem.Elements,
-                                    _innerDimensions.Height - flexItem.Height, Gap.Y, currentCross);
-                                currentCross += flexItem.Width + Gap.X;
-                            }
-
-                            break;
-                        case MainAxisAlignment.Center:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                FlexboxVPlacement(flexItem.Elements,
-                                    (_innerDimensions.Height - flexItem.Height) / 2f, Gap.Y, currentCross);
-                                currentCross += flexItem.Width + Gap.X;
-                            }
-
-                            break;
-                        case MainAxisAlignment.SpaceEvenly:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Height);
-                                gap = (_innerDimensions.Height - sum) / (flexItem.Elements.Count + 1);
-                                FlexboxVPlacement(flexItem.Elements, gap, gap, currentCross);
-                                currentCross += flexItem.Width + Gap.X;
-                            }
-
-                            break;
-                        case MainAxisAlignment.SpaceBetween:
-                            foreach (var flexItem in FlexItems)
-                            {
-                                var sum = flexItem.Elements.Sum(el => el._outerDimensions.Height);
-                                gap = (_innerDimensions.Height - sum) / (flexItem.Elements.Count - 1);
-                                FlexboxVPlacement(flexItem.Elements, 0f, gap, currentCross);
-                                currentCross += flexItem.Width + Gap.X;
-                            }
-
-                            break;
-                    }
-
-                break;
+            element.Position += new Vector2(offsetX, mainAxis);
+            mainAxis += element._outerDimensions.Height + gap;
         }
     }
 }

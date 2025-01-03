@@ -8,7 +8,7 @@ public class ChatUI : BasicBody
 {
     public SUIDraggableView MainPanel { get; private set; }
     public SUIScrollView ChatContainer { get; private set; }
-    public View InputContainer { get; private set; }
+    public View ActiveBarContainer { get; private set; }
 
     public override void OnInitialize()
     {
@@ -27,24 +27,20 @@ public class ChatUI : BasicBody
             Gap = new Vector2(-0.5f),
             FinallyDrawBorder = true,
             CornerRadius = new Vector4(12f),
-            Draggable = true,
+            Draggable = false,
             DragIncrement = new Vector2(5f)
         }.Join(this);
-        MainPanel.SetWidth(500f);
+        MainPanel.HAlign = 0.5f;
+        MainPanel.VAlign = 0.5f;
+        MainPanel.SetWidth(550f);
         MainPanel.SetPadding(-1f);
 
         ChatContainer = new SUIScrollView(Direction.Vertical)
         {
             CornerRadius = new Vector4(10f, 10f, 0f, 0f),
-            BgColor = Color.White * 0.25f,
         }.Join(MainPanel);
         ChatContainer.SetPadding(8f);
-        ChatContainer.SetSize(0, 260f, 1f);
-
-        for (var i = 0; i < 5; i++)
-        {
-            new SUIMessageItem((i + 1) % 2 == 0).Join(ChatContainer.Container);
-        }
+        ChatContainer.SetSize(0, 400f, 1f);
 
         // 分界线
         var br = new View
@@ -55,6 +51,7 @@ public class ChatUI : BasicBody
         br.SetSize(0, 2f, 1f);
 
         InputContainerInitialize();
+        ChatContainer.ScrollBar.ScrollByEnd();
     }
 
     private void InputContainerInitialize()
@@ -62,26 +59,62 @@ public class ChatUI : BasicBody
         var backgroundColor = new Color(63, 65, 151);
         var borderColor = new Color(18, 18, 38);
 
-        InputContainer = new View
+        ActiveBarContainer = new View
         {
             Display = Display.Flexbox,
             FlexDirection = FlexDirection.Row,
             MainAxisAlignment = MainAxisAlignment.SpaceBetween,
             CornerRadius = new Vector4(0f, 0f, 10f, 10f),
-            BgColor = Color.White * 0.5f,
+            BgColor = Color.Black * 0.1f,
         }.Join(MainPanel);
-        InputContainer.SetPadding(8f);
-        InputContainer.SetSize(0, 50f, 1f);
+        ActiveBarContainer.SetPadding(8f);
+        ActiveBarContainer.SetSize(0, 80f, 1f);
 
-        var input = new View
+        var inputContainer = new SUIScrollView(Direction.Vertical)
         {
             CornerRadius = new Vector4(8f),
             Border = 2,
             BorderColor = borderColor * 0.75f,
             BgColor = backgroundColor * 0.75f,
-        }.Join(InputContainer);
-        input.SetPadding(-1f);
-        input.SetSize(-80f - 8f, 0f, 1f, 1f);
+        }.Join(ActiveBarContainer);
+        inputContainer.SetPadding(8f);
+        inputContainer.SetSize(-140f - 16f, 0f, 1f, 1f);
+
+        var input = new SUIEditText
+        {
+            TextAlign = new Vector2(0, 0f),
+            OverflowHidden = true,
+            WordWrap = true,
+            MinHeight = { Percent = 1f },
+            PaddingLeft = 2f,
+            PaddingRight = 2f,
+        }.Join(inputContainer.Container);
+        input.OnTextChanged += () =>
+        {
+            inputContainer.Recalculate();
+            inputContainer.ScrollBar.ScrollByEnd();
+        };
+        input.OnEnterKeyDown += () => { SendMessage(input); };
+        input.SetWidth(0f, 1f);
+
+        var clearButton = new SUIText
+        {
+            CornerRadius = new Vector4(8f),
+            Border = 2,
+            BorderColor = borderColor * 0.75f,
+            BgColor = backgroundColor * 0.75f,
+            Text = "清空",
+            TextAlign = new Vector2(0.5f),
+            DragIgnore = false,
+            TextColor = Color.Red
+        }.Join(ActiveBarContainer);
+        clearButton.SetPadding(-1f);
+        clearButton.SetSize(70f, 0f, 0f, 1f);
+        clearButton.OnLeftMouseDown += (_, _) =>
+        {
+            ChatContainer?.Container?.RemoveAllChildren();
+            ChatContainer?.Recalculate();
+        };
 
         var send = new SUIText
         {
@@ -91,20 +124,46 @@ public class ChatUI : BasicBody
             BgColor = backgroundColor * 0.75f,
             Text = "发送",
             TextAlign = new Vector2(0.5f),
-        }.Join(InputContainer);
+            DragIgnore = false,
+        }.Join(ActiveBarContainer);
         send.SetPadding(-1f);
-        send.SetSize(80f, 0f, 0f, 1f);
+        send.SetSize(70f, 0f, 0f, 1f);
+        send.OnLeftMouseDown += (_, _) => { SendMessage(input); };
+    }
+
+    public void SendMessage(SUIEditText input)
+    {
+        if (ChatContainer.Container != null)
+        {
+            var count = ChatContainer.Container.Children.Count() - 50;
+            if (count > 0)
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    ChatContainer.Container.Children.First().Remove();
+                }
+
+                ChatContainer.Recalculate();
+                ChatContainer.ScrollBar.CurrentScrollPosition = ChatContainer.ScrollBar.CurrentScrollPosition;
+            }
+        }
+
+        var sender = Main.LocalPlayer.name;
+        var message = input.Text;
+        input.Text = string.Empty;
+        new MessageComp(sender, message, true)
+            .Join(ChatContainer.Container);
+
+        ChatContainer.Recalculate();
+        ChatContainer.ScrollBar.ScrollByEnd();
     }
 
     public override void Draw(SpriteBatch spriteBatch)
     {
         UseRenderTarget = false;
-        
+
         MainPanel.HoverTimer.Speed = 15f;
         Opacity = MainPanel.HoverTimer.Lerp(0f, 1f);
-
-        var offset = MainPanel.HoverTimer.Lerp(20f, 0f);
-        MainPanel.TransformMatrix = Matrix.CreateTranslation(0, 0f, 0f);
 
         base.Draw(spriteBatch);
     }

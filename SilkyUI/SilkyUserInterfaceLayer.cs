@@ -38,7 +38,7 @@ public class SilkyUserInterfaceLayer : GameInterfaceLayer
             null, null, null, null, null, transformMatrix);
 
         OnPreDraw();
-        var result = UserInterface.Draw();
+        var result = UserInterface.DrawUI();
         OnPostDraw();
         return result;
     }

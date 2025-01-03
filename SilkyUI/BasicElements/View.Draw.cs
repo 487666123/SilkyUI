@@ -1,7 +1,16 @@
 ﻿namespace SilkyUI.BasicElements;
 
+public enum HiddenBox
+{
+    Outer,
+    Middle,
+    Inner,
+}
+
 public partial class View
 {
+    public HiddenBox HiddenBox { get; set; } = HiddenBox.Middle;
+
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
         RoundedRectangle.Draw(GetDimensions().Position(), GetDimensions().Size(), FinallyDrawBorder, FinalMatrix);
@@ -29,6 +38,8 @@ public partial class View
     /// </summary>
     public override void Draw(SpriteBatch spriteBatch)
     {
+        if (Display is Display.None) return;
+
         UpdateAnimationTimer();
         if (TransformMatrixHasChanges) UpdateMatrix();
 
@@ -112,16 +123,17 @@ public partial class View
         // 不绘制完全溢出的子元素
         if (OverflowHidden || HideFullyOverflowedElements)
         {
-            foreach (var uie in from uie in children
-                     where _dimensions.Intersects(uie._dimensions)
-                     select uie)
+            foreach (var uie in children
+                         .Where(uie =>
+                             uie is not View { Display: Display.None } && _dimensions.Intersects(uie._dimensions)))
             {
                 uie.Draw(spriteBatch);
             }
         }
         else
         {
-            foreach (var element in children)
+            foreach (var element in children
+                         .Where(el => el is not View { Display: Display.None }))
             {
                 element.Draw(spriteBatch);
             }
@@ -130,8 +142,23 @@ public partial class View
 
     protected virtual Rectangle GetClippingRectangleFromView(SpriteBatch spriteBatch)
     {
-        var topLeft = Vector2.Transform(_dimensions.Position(), FinalMatrix);
-        var rightBottom = Vector2.Transform(_dimensions.RightBottom(), FinalMatrix);
+        CalculatedStyle box;
+        switch (HiddenBox)
+        {
+            case HiddenBox.Outer:
+                box = _outerDimensions;
+                break;
+            default:
+            case HiddenBox.Middle:
+                box = _dimensions;
+                break;
+            case HiddenBox.Inner:
+                box = _innerDimensions;
+                break;
+        }
+
+        var topLeft = Vector2.Transform(box.Position(), FinalMatrix);
+        var rightBottom = Vector2.Transform(box.RightBottom(), FinalMatrix);
         var rectangle =
             new Rectangle(
                 (int)Math.Floor(topLeft.X), (int)Math.Floor(topLeft.Y),
@@ -141,11 +168,15 @@ public partial class View
         return Rectangle.Intersect(rectangle, scissorRectangle);
     }
 
+    public event Action OnUpdateAnimationTimer;
+
     /// <summary>
     /// 更新动画计时器
     /// </summary>
     protected virtual void UpdateAnimationTimer()
     {
+        OnUpdateAnimationTimer?.Invoke();
+
         if (IsMouseHovering)
         {
             if (!HoverTimer.IsForward)

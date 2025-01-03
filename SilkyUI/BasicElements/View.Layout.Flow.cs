@@ -2,7 +2,13 @@
 
 public partial class View
 {
-    protected virtual void ReflowFlowLayout()
+    public Vector2 GetFlowSize()
+    {
+        if (FlowElements is null || FlowElements.Count == 0) return Vector2.Zero;
+        return new Vector2(0f, FlowElements.Sum(element => element._outerDimensions.Height + Gap.X) - Gap.X);
+    }
+
+    protected virtual void FlowArrange()
     {
         var currentTop = 0f;
 

@@ -17,9 +17,9 @@ public abstract class BasicBody : View
     public virtual bool IsNotSelectable => false;
 
     /// <summary>
-    /// 鼠标在当前 UI 某一个元素上时调用此方法，返回 true 此元素会占用光标，防止下层 UI 触发鼠标事件
+    /// 元素能否交互 (可交互将阻挡下层元素交互)
     /// </summary>
-    public virtual bool CanSetFocusTarget(UIElement target) => target != null && target != this;
+    public virtual bool AreHoverTargetInteractive(UIElement hoverTarget) => hoverTarget != null && hoverTarget != this;
 
     public override void Update(GameTime gameTime)
     {

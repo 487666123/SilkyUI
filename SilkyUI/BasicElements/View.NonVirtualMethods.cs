@@ -1,4 +1,6 @@
-﻿namespace SilkyUI.BasicElements;
+﻿using SilkyUI.Core;
+
+namespace SilkyUI.BasicElements;
 
 public partial class View
 {
@@ -12,15 +14,24 @@ public partial class View
 
         Elements.ForEach(element =>
         {
-            if (element is View { Positioning: Positioning.Relative } view)
-                FlowElements.Add(view);
-            else
-                AbsoluteElements.Add(element);
+            switch (element)
+            {
+                case View { Display: Display.None }:
+                    return;
+                case View { Positioning: Positioning.Relative or Positioning.Sticky } view:
+                    FlowElements.Add(view);
+                    break;
+                default:
+                    AbsoluteElements.Add(element);
+                    break;
+            }
         });
     }
 
     public IOrderedEnumerable<UIElement> GetChildrenByZIndex() =>
         Elements.OrderBy(el => el is View v ? v.ZIndex : 0f);
+
+    #region SetSize
 
     /// <summary>
     /// 会将 <see cref="SpecifyWidth"/> 设为 true
@@ -82,4 +93,6 @@ public partial class View
 
         SpecifyWidth = SpecifyHeight = true;
     }
+
+    #endregion
 }

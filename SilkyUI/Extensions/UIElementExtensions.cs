@@ -1,4 +1,6 @@
-﻿namespace SilkyUI.Extensions;
+﻿using SilkyUI.Core;
+
+namespace SilkyUI.Extensions;
 
 public static class UIElementExtensions
 {

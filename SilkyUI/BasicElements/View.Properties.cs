@@ -1,28 +1,12 @@
 using SilkyUI.Animation;
+using SilkyUI.Core;
 
 namespace SilkyUI.BasicElements;
 
-public enum BoxSizing
-{
-    BorderBox,
-    ContentBox
-}
-
-public enum Display
-{
-    Flow,
-    Flexbox,
-}
-
-public enum Positioning
-{
-    Relative,
-    Absolute,
-    Sticky,
-}
-
 public partial class View
 {
+    #region RoundedRectangle
+
     public RoundedRectangle RoundedRectangle { get; } = new();
 
     public Vector4 CornerRadius
@@ -49,24 +33,17 @@ public partial class View
         set => RoundedRectangle.BorderColor = value;
     }
 
-    public float ZIndex = 0f;
+    #endregion
 
-    /// <summary>
-    /// 是相对定位
-    /// </summary>
-    public bool IsRelative => Positioning is Positioning.Relative;
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
 
-    /// <summary>
-    /// 是绝对定位
-    /// </summary>
-    public bool IsAbsolute => Positioning is Positioning.Absolute;
-
-    public Display Display { get; set; } = Display.Flow;
+    public float ZIndex { get; set; }
 
     public AnimationTimer HoverTimer { get; } = new();
 
     /// <summary>
-    /// 其他一切绘制都结束之后再绘制边框
+    /// 最后绘制边框
     /// </summary>
     public bool FinallyDrawBorder { get; set; }
 
@@ -74,19 +51,6 @@ public partial class View
     /// 隐藏完全溢出元素
     /// </summary>
     public bool HideFullyOverflowedElements { get; set; }
-
-    /// <summary>
-    /// 决定盒子模型计算方式
-    /// </summary>
-    public BoxSizing BoxSizing { get; set; } = BoxSizing.BorderBox;
-
-    /// <summary>
-    /// 元素定位<br/>
-    /// 所有非 <see cref="View"/> 及其子元素的 <see cref="UIElement"/> 都为 <see cref="Positioning.Absolute"/><br/>
-    /// 所以并不建议使用原版的任何元素<br/>
-    /// 如果现有元素不能满足你的需求，可以向此项目 issue 或 Pr
-    /// </summary>
-    public Positioning Positioning { get; set; } = Positioning.Relative;
 
     /// <summary>
     /// 拖动忽略, true: 不影响父辈元素拖动, false: 阻止父辈元素拖动
@@ -97,23 +61,9 @@ public partial class View
     public bool RightMousePressed { get; set; }
     public bool MiddleMousePressed { get; set; }
 
-    /// <summary>
-    /// 指定宽, 否则会被子元素撑起
-    /// </summary>
+    /// <summary> true: 固定宽, 否则由布局决定 </summary>
     public bool SpecifyWidth { get; set; }
 
-    /// <summary>
-    /// 指定高, 否则会被子元素撑起
-    /// </summary>
+    /// <summary> true: 固定高, 否则由布局决定 </summary>
     public bool SpecifyHeight { get; set; }
-
-    /// <summary>
-    /// 文档流元素
-    /// </summary>
-    protected readonly List<View> FlowElements = [];
-
-    /// <summary>
-    /// 非文档流元素
-    /// </summary>
-    protected readonly List<UIElement> AbsoluteElements = [];
 }

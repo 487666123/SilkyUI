@@ -1,4 +1,4 @@
-﻿namespace SilkyUI.BasicComponents;
+﻿namespace SilkyUI.BasicElements;
 
 /// <summary>
 /// 可拖动视图

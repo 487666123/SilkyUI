@@ -1,11 +1,6 @@
-﻿namespace SilkyUI.BasicComponents;
+﻿using SilkyUI.BasicComponents;
 
-/// <summary> 滚动方向 </summary>
-public enum Direction
-{
-    Horizontal,
-    Vertical
-}
+namespace SilkyUI.BasicElements;
 
 public class SUIScrollView : View
 {
@@ -27,13 +22,12 @@ public class SUIScrollView : View
             OverflowHidden = true,
             Display = Display.Flexbox,
             Gap = new Vector2(8f),
-            FlexDirection = FlexDirection.Column,
             MainAxisAlignment = MainAxisAlignment.SpaceBetween,
             FlexWrap = true,
         }.Join(this);
 
 
-        ScrollBar = new SUIScrollbar(Container)
+        ScrollBar = new SUIScrollbar(direction, Container)
         {
             CornerRadius = new Vector4(4f),
             BgColor = Color.Black * 0.25f,
@@ -43,13 +37,13 @@ public class SUIScrollView : View
         switch (Direction)
         {
             case Direction.Horizontal:
-                FlexDirection = FlexDirection.Column;
+                Container.FlexDirection = FlexDirection.Column;
                 Container.SetSize(0, -16f, 1f, 1f);
                 ScrollBar.SetSize(0f, 8f, 1f, 0f);
                 break;
             default:
             case Direction.Vertical:
-                FlexDirection = FlexDirection.Row;
+                Container.FlexDirection = FlexDirection.Row;
                 Container.SetSize(-16f, 0, 1f, 1f);
                 ScrollBar.SetSize(8f, 0f, 0f, 1f);
                 break;
@@ -63,16 +57,17 @@ public class SUIScrollView : View
     {
         base.Recalculate();
 
-        if (Container is null) return;
-        Container.GetContentSize(out var size);
+        if (Container == null) return;
+
+        var content = Container.GetContentSize();
         switch (Direction)
         {
             case Direction.Horizontal:
-                ScrollBar?.SetHScrollRange(Container._innerDimensions.Width, size.X);
+                ScrollBar?.SetHScrollRange(Container._innerDimensions.Width, content.X);
                 break;
             default:
             case Direction.Vertical:
-                ScrollBar?.SetVScrollRange(_innerDimensions.Height, size.Y);
+                ScrollBar?.SetVScrollRange(Container._innerDimensions.Height, content.Y);
                 break;
         }
     }
@@ -82,11 +77,11 @@ public class SUIScrollView : View
         switch (Direction)
         {
             case Direction.Horizontal:
-                ScrollBar.SetHScrollTarget(-evt.ScrollWheelValue);
+                ScrollBar.HScrollBy(-evt.ScrollWheelValue);
                 break;
             default:
             case Direction.Vertical:
-                ScrollBar.SetVScrollTarget(-evt.ScrollWheelValue);
+                ScrollBar.VScrollBy(-evt.ScrollWheelValue);
                 break;
         }
 

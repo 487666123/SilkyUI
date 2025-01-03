@@ -1,9 +1,16 @@
 ﻿namespace SilkyUI.BasicElements;
 
+public interface IInputElement
+{
+    bool OccupyInput { get; }
+
+    void OnInput(string input);
+}
+
 /// <summary>
 /// 所有 SilkyUI 元素的父类
 /// </summary>
-public partial class View : UIElement
+public partial class View : UIElement, IInputElement
 {
     public View()
     {
@@ -18,8 +25,18 @@ public partial class View : UIElement
         OnMiddleMouseUp += (_, _) => MiddleMousePressed = false;
     }
 
+    /// <summary> 占用输入 </summary>
+    public virtual bool OccupyInput { get; set; }
+
+    /// <summary> 输入 </summary>
+    public virtual void OnInput(string input)
+    {
+    }
+
     public virtual UIElement GetElementAtFromView(Vector2 point)
     {
+        if (Display is Display.None) return null;
+
         var children =
             GetChildrenByZIndex().OfType<View>().Where(el => !el.IgnoresMouseInteraction).Reverse().ToArray();
 

@@ -38,12 +38,12 @@ public class SilkyUserInterfaceManager
     /// <summary>
     /// 鼠标焦点元素
     /// </summary>
-    public UIElement MouseFocusUIElement { get; set; }
+    public UIElement MouseHoverTarget { get; set; }
 
     /// <summary>
     /// 当前鼠标焦点下是否有元素
     /// </summary>
-    public bool HasMouseFocusUIElement => MouseFocusUIElement is not null;
+    public bool HasMouseHoverElement => MouseHoverTarget is not null;
 
     /// <summary>
     /// <see cref="UserInterface"/> 实例绑定的 <see cref="BasicBody"/> <see cref="Type"/>
@@ -96,7 +96,7 @@ public class SilkyUserInterfaceManager
     /// </summary>
     public void UpdateUI(GameTime gameTime)
     {
-        MouseFocusUIElement = null;
+        MouseHoverTarget = null;
 
         try
         {

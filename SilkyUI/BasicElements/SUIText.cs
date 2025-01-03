@@ -29,6 +29,8 @@ public class SUIText : View
     private int _maxWordLength = 19;
     private int _maxLines = -1;
 
+    public event Action OnTextChanged;
+
     public string Text
     {
         get => _text;
@@ -37,6 +39,7 @@ public class SUIText : View
             if (_text == value) return;
             _text = value;
             RecalculateText();
+            OnTextChanged?.Invoke();
         }
     }
 
@@ -94,32 +97,39 @@ public class SUIText : View
 
     public Vector2 TextSize { get; protected set; } = Vector2.Zero;
 
-    protected override Vector2 CalculateOuterSize(float width, float height)
+    public override Vector2 GetContentSize()
     {
-        RecalculateText(width <= 0 ? float.MaxValue : width);
+        RecalculateText();
 
-        if (!SpecifyWidth) width = TextSize.X;
-        if (!SpecifyHeight) height = TextSize.Y * TextScale;
-
-        return base.CalculateOuterSize(width, height);
+        var content = base.GetContentSize();
+        if (!SpecifyWidth) content.X = TextSize.X * TextScale;
+        if (!SpecifyHeight) content.Y = TextSize.Y * TextScale;
+        return content;
     }
 
-    protected virtual void RecalculateText(float? width = null)
+    public virtual string GetOrigianlText()
+    {
+        return LastText;
+    }
+
+    protected virtual void RecalculateText()
     {
         LastText = Text;
-        LastMaxWidth = width ?? _innerDimensions.Width;
+        LastMaxWidth = SpecifyWidth ? _innerDimensions.Width : 114514f;
+
+        var origianlText = GetOrigianlText();
 
         // 是否换行
         if (_wordWrap)
         {
-            var maxWidth = _innerDimensions.Width / TextScale;
+            var maxWidth = LastMaxWidth / TextScale;
             TextSnippetHelper.WordwrapString
-                (FinalSnippets, LastText, TextColor, Font, maxWidth, MaxWordLength, MaxLines);
+                (FinalSnippets, origianlText, TextColor, Font, maxWidth, MaxWordLength, MaxLines);
         }
         else
         {
             TextSnippetHelper.ConvertNormalSnippets
-                (TextSnippetHelper.ParseMessage(LastText, TextColor), FinalSnippets);
+                (TextSnippetHelper.ParseMessage(origianlText, TextColor), FinalSnippets);
         }
 
         TextSize = ChatManager.GetStringSize(Font, FinalSnippets.ToArray(), new Vector2(1f));
@@ -128,38 +138,45 @@ public class SUIText : View
     public override void DrawSelf(SpriteBatch spriteBatch)
     {
         base.DrawSelf(spriteBatch);
+    }
 
+    public override void DrawChildren(SpriteBatch spriteBatch)
+    {
+        DrawText(spriteBatch, FinalSnippets.ToList());
+        base.DrawChildren(spriteBatch);
+    }
+
+    protected virtual void DrawText(SpriteBatch spriteBatch, List<TextSnippet> finalSnippets)
+    {
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (LastText != Text || (_wordWrap && LastMaxWidth != _innerDimensions.Width)) RecalculateText();
 
         var innerSize = _innerDimensions.Size();
-        var innerPos = _innerDimensions.Position();
 
         var textSize = TextSize;
-        // 无字符时会出问题，加上下面这行就好了
+        // 无字符时会出问题，加上这行就好了
         textSize.Y = Math.Max(Font.LineSpacing, textSize.Y);
 
         SilkyUISystem.Instance.Configuration.FontYAxisOffset.TryGetValue(Font, out var yAxisOffset);
 
         var textPos =
-            innerPos
+            _innerDimensions.Position()
             + TextOffset
             + TextPercentOffset * innerSize
             + TextAlign * (innerSize - textSize * TextScale)
             - TextPercentOrigin * TextSize * TextScale;
         textPos.Y += TextScale * yAxisOffset;
 
-        var textSnippets = FinalSnippets.ToArray();
-        DrawColorCodedStringShadow(spriteBatch, Font, textSnippets,
+        DrawColorCodedStringShadow(spriteBatch, Font, finalSnippets,
             textPos, TextBorderColor, 0f, Vector2.Zero, new Vector2(TextScale));
-        DrawColorCodedString(spriteBatch, Font, textSnippets,
+        DrawColorCodedString(spriteBatch, Font, finalSnippets,
             textPos, TextColor, 0f, Vector2.Zero, new Vector2(TextScale), out _, -1f);
     }
 
     protected static readonly Vector2[] ShadowOffsets = [-Vector2.UnitX, Vector2.UnitX, -Vector2.UnitY, Vector2.UnitY];
 
     protected static void DrawColorCodedStringShadow(SpriteBatch spriteBatch, DynamicSpriteFont font,
-        TextSnippet[] snippets, Vector2 position, Color baseColor, float rotation, Vector2 origin,
+        List<TextSnippet> snippets, Vector2 position, Color baseColor, float rotation, Vector2 origin,
         Vector2 baseScale, float maxWidth = -1f,
         float spread = 2f)
     {
@@ -169,7 +186,7 @@ public class SUIText : View
     }
 
     protected static Vector2 DrawColorCodedString(SpriteBatch spriteBatch, DynamicSpriteFont font,
-        TextSnippet[] snippets,
+        List<TextSnippet> snippets,
         Vector2 position, Color baseColor, float rotation, Vector2 origin, Vector2 baseScale, out int hoveredSnippet,
         float maxWidth, bool ignoreColors = false)
     {
@@ -180,7 +197,7 @@ public class SUIText : View
         var x = font.MeasureString(" ").X;
         var color = baseColor;
         var num2 = 0.0f;
-        for (var index1 = 0; index1 < snippets.Length; ++index1)
+        for (var index1 = 0; index1 < snippets.Count; ++index1)
         {
             var snippet = snippets[index1];
             snippet.Update();
